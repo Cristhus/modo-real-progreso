@@ -97,6 +97,29 @@
     E('walking_lunge', 'Zancadas Caminando con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Pasos largos; la rodilla de atrás casi toca el piso y el torso va erguido.'),
     E('single_leg_press', 'Prensa a Una Pierna', 'Cuádriceps · Glúteo', 'plate', 'Un pie en el centro de la plataforma; recorrido completo sin despegar la cadera.'),
   ];
+  // Guías de MuscleWiki (con video). Slugs tomados de su sitemap y verificados con Chrome
+  // (HTTP 200 + video) el 2026-10-02. Se enlaza la versión en español.
+  const MUSCLEWIKI = {
+    smith_bench: 'smith-machine-bench-press', db_bench: 'dumbbell-bench-press', db_incline: 'dumbbell-incline-bench-press',
+    machine_chest: 'machine-chest-press', lat_pulldown: 'machine-pulldown', lat_pulldown_neutral: 'neutral-pulldown',
+    assisted_pullup: 'machine-assisted-pull-up', lat_pulldown_single: 'band-seated-single-arm-pulldown', db_pullover: 'dumbbell-pullover',
+    db_row: 'dumbbell-single-arm-row', cable_row: 'machine-seated-cable-row', machine_row: 'machine-neutral-row',
+    db_chest_row: 'dumbbell-laying-incline-row', db_lateral: 'dumbbell-lateral-raise', cable_lateral: 'cable-low-single-arm-lateral-raise',
+    machine_lateral: 'machine-standing-lateral-raise', leg_press: 'machine-leg-press', smith_squat: 'smith-machine-squat',
+    hack_squat: 'machine-hack-squat', goblet_squat: 'dumbbell-goblet-squat', db_rdl: 'dumbbell-romanian-deadlift',
+    smith_rdl: 'smith-machine-romanian-deadlift', bb_rdl: 'barbell-romanian-deadlift', leg_ext: 'machine-leg-extension',
+    leg_ext_single: 'machine-leg-extension', bulgarian: 'dumbbell-bulgarian-split-squat', smith_calf: 'smith-machine-calf-raise',
+    press_calf: 'machine-horizontal-leg-press-calf-raise', seated_calf: 'machine-seated-calf-raises', smith_incline: 'smith-machine-incline-bench-press',
+    machine_incline: 'machine-plate-loaded-incline-chest-press', db_ohp: 'dumbbell-seated-overhead-press', smith_ohp: 'smith-machine-seated-overhead-press',
+    machine_ohp: 'machine-overhand-overhead-press', cable_oh_ext: 'cable-rope-overhead-tricep-extension', db_french: 'dumbbell-skullcrusher',
+    db_oh_ext: 'dumbbell-overhead-tricep-extension', cable_pushdown: 'cable-bar-pushdown', cable_fly: 'cable-pec-fly',
+    pec_deck: 'machine-pec-fly', db_fly: 'dumbbell-chest-fly', db_curl: 'dumbbell-curl', incline_curl: 'dumbbell-incline-curl',
+    cable_curl: 'cable-bar-curl', ez_curl: 'ez-bar-curl', face_pull: 'machine-face-pulls', reverse_pec_deck: 'machine-reverse-fly',
+    db_rear_fly: 'dumbbell-rear-delt-fly', smith_hip_thrust: 'smith-machine-hip-thrust', bb_hip_thrust: 'barbell-hip-thrust',
+    machine_hip_thrust: 'machine-hip-thrust', seated_leg_curl: 'machine-seated-leg-curl', lying_leg_curl: 'machine-hamstring-curl',
+    standing_leg_curl: 'machine-standing-hamstring-curl', walking_lunge: 'lunge-walking', single_leg_press: 'machine-single-leg-leg-press',
+  };
+  for (const e of EXERCISE_LIST) if (MUSCLEWIKI[e.id]) e.mw = 'https://musclewiki.com/es-es/exercise/' + MUSCLEWIKI[e.id];
   const EXERCISES = Object.fromEntries(EXERCISE_LIST.map(e => [e.id, e]));
 
   // ---------- Rutina L–V ----------

@@ -22,6 +22,12 @@ test('catálogo y rutina son consistentes', () => {
   assert.equal(new Set(names).size, names.length, 'nombres únicos');
 });
 
+test('todos los ejercicios tienen guía de MuscleWiki en español', () => {
+  for (const e of M.EXERCISE_LIST) {
+    assert.match(e.mw || '', /^https:\/\/musclewiki\.com\/es-es\/exercise\/[a-z0-9-]+$/, e.id);
+  }
+});
+
 test('estimación de tiempo dentro de 60–90 min con el opcional', () => {
   for (const day of M.ROUTINE) {
     const full = M.estMinutes(day, true);

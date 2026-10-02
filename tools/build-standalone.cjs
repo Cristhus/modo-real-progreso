@@ -13,7 +13,7 @@ const tag = '<script src="core.js"></script>';
 if (!html.includes(tag)) throw new Error('No se encontró ' + tag);
 html = html
   .replace(tag, () => '<script>\n' + core.replace(/<\/script/gi, '<\\/script') + '\n</script>')
-  .replace('<link rel="manifest" href="manifest.webmanifest">\n', '')
+  .replace(/<link rel="manifest" href="manifest\.webmanifest">\r?\n?/, '')
   .replace('href="icons/icon-192.png"', () => 'href="' + icon + '"')
   .replace('href="icons/apple-touch-icon.png"', () => 'href="' + icon + '"');
 fs.writeFileSync(out, html);

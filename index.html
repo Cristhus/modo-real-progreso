@@ -139,7 +139,8 @@ details.warm p{margin-top:6px}
 .card-actions{display:flex;flex-wrap:wrap;gap:6px}
 .mini{font-family:var(--cond);font-weight:600;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;padding:7px 10px;border-radius:8px;border:1px solid var(--steel-600);background:var(--steel-900);cursor:pointer;color:var(--chalk-dim)}
 .mini:disabled{opacity:.4;cursor:default}
-.mini.link{margin-left:auto}
+.links{display:flex;gap:6px;margin-top:6px}
+.links .mini{flex:1;text-align:center;color:var(--chalk)}
 .mini.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,transparent)}
 .perf{list-style:none;margin-top:8px;border-top:1px solid var(--steel-700);padding-top:6px;font-size:.85rem}
 .perf li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--chalk-dim)}
@@ -467,7 +468,10 @@ function slotHtml(day, slot, idx, draft) {
       <button class="mini" data-act="addset">+ Serie</button>
       <button class="mini" data-act="rmset"${rows.length <= 1 ? ' disabled' : ''}>− Serie</button>
       <button class="mini" data-act="hist" aria-expanded="${histOpen}">Historial (${perf.length})</button>
-      <a class="mini link" target="_blank" rel="noopener" href="${ytUrl(ex)}">▶ Técnica</a>
+    </div>
+    <div class="links">
+      ${ex.mw ? `<a class="mini" target="_blank" rel="noopener" href="${esc(ex.mw)}">▶ MuscleWiki</a>` : ''}
+      <a class="mini" target="_blank" rel="noopener" href="${ytUrl(ex)}">▶ YouTube</a>
     </div>
     ${histOpen ? perfHtml(perf) : ''}
     ${ex.cue ? `<p class="cue">${esc(ex.cue)}</p>` : ''}
