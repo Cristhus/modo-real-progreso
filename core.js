@@ -24,75 +24,75 @@
   // ---------- Catálogo ----------
   const EXERCISE_LIST = [
     // Empuje horizontal
-    E('smith_bench', 'Press de Banca en Máquina Smith', 'Pecho / Tríceps', 'smith', 'Barra sobre el pecho medio; bajá controlado hasta rozar el pecho y empujá sin rebotar.'),
-    E('db_bench', 'Press de Banca con Mancuernas', 'Pecho / Tríceps', 'db', 'Escápulas juntas y pies firmes; bajá las mancuernas a los costados del pecho con los codos a ~45°.', { hint: 'Orientación: con mancuernas el 1RM total (las dos juntas) es ~14 % menor que en Smith (Saeterbakken 2011). Acá anotás kg por mancuerna.' }),
-    E('db_incline', 'Press Inclinado con Mancuernas', 'Pecho superior / Tríceps', 'db', 'Banco a 30–45°; bajá hasta sentir el estiramiento del pecho y empujá arriba y levemente hacia adentro.', { hint: 'Orientación: con mancuernas se mueve menos carga total que con barra o Smith (Saeterbakken 2011). Acá anotás kg por mancuerna.' }),
+    E('smith_bench', 'Press de Banca en Máquina Smith', 'Pecho / Tríceps', 'smith', 'Barra sobre el pecho medio; baja controlado hasta rozar el pecho y empuja sin rebotar.'),
+    E('db_bench', 'Press de Banca con Mancuernas', 'Pecho / Tríceps', 'db', 'Escápulas juntas y pies firmes; baja las mancuernas a los costados del pecho con los codos a ~45°.', { hint: 'Orientación: con mancuernas el 1RM total (las dos juntas) es ~14 % menor que en Smith (Saeterbakken 2011). Aquí anotas kg por mancuerna.' }),
+    E('db_incline', 'Press Inclinado con Mancuernas', 'Pecho superior / Tríceps', 'db', 'Banco a 30–45°; baja hasta sentir el estiramiento del pecho y empuja arriba y levemente hacia adentro.', { hint: 'Orientación: con mancuernas se mueve menos carga total que con barra o Smith (Saeterbakken 2011). Aquí anotas kg por mancuerna.' }),
     E('machine_chest', 'Press de Pecho en Máquina', 'Pecho / Tríceps', 'stack', 'Asiento a la altura en que las manijas salen del pecho medio; recorrido completo.'),
     // Tracción vertical
-    E('lat_pulldown', 'Jalón al Pecho en Polea Alta', 'Espalda · Dorsales', 'stack', 'Agarre algo más ancho que los hombros; llevá los codos hacia los bolsillos traseros con el pecho arriba.'),
-    E('lat_pulldown_neutral', 'Jalón con Agarre Neutro', 'Espalda · Dorsales', 'stack', 'Agarre en V o neutro; tirá hacia la parte alta del pecho sin balancear el torso.'),
-    E('assisted_pullup', 'Dominada Asistida en Máquina', 'Espalda · Dorsales', 'assist', 'Menos asistencia = más difícil. Bajá con los brazos estirados y subí llevando el pecho hacia la barra.'),
-    E('lat_pulldown_single', 'Jalón Unilateral en Polea', 'Espalda · Dorsales', 'stack', 'Un brazo por vez; codo hacia la cadera y estirá completo arriba para sentir el dorsal.', { step: 2.5 }),
-    E('db_pullover', 'Pullover con Mancuerna en Banco', 'Dorsal · Amplitud', 'db1', 'Brazos casi estirados; bajá la mancuerna detrás de la cabeza hasta estirar el dorsal y volvé sobre el pecho.'),
+    E('lat_pulldown', 'Jalón al Pecho en Polea Alta', 'Espalda · Dorsales', 'stack', 'Agarre algo más ancho que los hombros; lleva los codos hacia los bolsillos traseros con el pecho arriba.'),
+    E('lat_pulldown_neutral', 'Jalón con Agarre Neutro', 'Espalda · Dorsales', 'stack', 'Agarre en V o neutro; tira hacia la parte alta del pecho sin balancear el torso.'),
+    E('assisted_pullup', 'Dominada Asistida en Máquina', 'Espalda · Dorsales', 'assist', 'Menos asistencia = más difícil. Baja con los brazos estirados y sube llevando el pecho hacia la barra.'),
+    E('lat_pulldown_single', 'Jalón Unilateral en Polea', 'Espalda · Dorsales', 'stack', 'Un brazo por vez; codo hacia la cadera y estira completo arriba para sentir el dorsal.', { step: 2.5 }),
+    E('db_pullover', 'Pullover con Mancuerna en Banco', 'Dorsal · Amplitud', 'db1', 'Brazos casi estirados; baja la mancuerna detrás de la cabeza hasta estirar el dorsal y vuelve sobre el pecho.'),
     // Tracción horizontal
-    E('db_row', 'Remo con Mancuerna a Una Mano', 'Espalda · Dorsales', 'db', 'Mano y rodilla apoyadas en el banco; llevá la mancuerna hacia la cadera con el codo pegado.', { aliases: ['Remo en Máquina o con Mancuerna'] }),
-    E('cable_row', 'Remo en Polea Baja Sentado', 'Espalda media', 'stack', 'Pecho alto y espalda neutra; llevá el agarre al abdomen juntando las escápulas, sin balancear.'),
-    E('machine_row', 'Remo en Máquina con Apoyo de Pecho', 'Espalda media', 'stack', 'Pecho apoyado; tirá con los codos hacia atrás y hacé una pausa de 1 s apretando la espalda.'),
-    E('db_chest_row', 'Remo con Mancuernas en Banco Inclinado', 'Espalda media', 'db', 'Pecho apoyado en el banco inclinado; remá ambas mancuernas hacia la cadera sin despegar el pecho.'),
+    E('db_row', 'Remo con Mancuerna a Una Mano', 'Espalda · Dorsales', 'db', 'Mano y rodilla apoyadas en el banco; lleva la mancuerna hacia la cadera con el codo pegado.', { aliases: ['Remo en Máquina o con Mancuerna'] }),
+    E('cable_row', 'Remo en Polea Baja Sentado', 'Espalda media', 'stack', 'Pecho alto y espalda neutra; lleva el agarre al abdomen juntando las escápulas, sin balancear.'),
+    E('machine_row', 'Remo en Máquina con Apoyo de Pecho', 'Espalda media', 'stack', 'Pecho apoyado; tira con los codos hacia atrás y haz una pausa de 1 s apretando la espalda.'),
+    E('db_chest_row', 'Remo con Mancuernas en Banco Inclinado', 'Espalda media', 'db', 'Pecho apoyado en el banco inclinado; rema ambas mancuernas hacia la cadera sin despegar el pecho.'),
     // Deltoide lateral
-    E('db_lateral', 'Elevación Lateral con Mancuernas', 'Hombro · Deltoide lateral', 'db', 'Codos levemente flexionados; subí hacia los costados hasta la altura de los hombros, sin impulso.'),
-    E('cable_lateral', 'Elevación Lateral en Polea', 'Hombro · Deltoide lateral', 'stack', 'Polea baja del lado contrario; subí el brazo hacia el costado hasta la altura del hombro.', { step: 2.5 }),
-    E('machine_lateral', 'Elevación Lateral en Máquina', 'Hombro · Deltoide lateral', 'stack', 'Hombro alineado con el eje de la máquina; subí con los codos sin encoger los hombros.'),
+    E('db_lateral', 'Elevación Lateral con Mancuernas', 'Hombro · Deltoide lateral', 'db', 'Codos levemente flexionados; sube hacia los costados hasta la altura de los hombros, sin impulso.'),
+    E('cable_lateral', 'Elevación Lateral en Polea', 'Hombro · Deltoide lateral', 'stack', 'Polea baja del lado contrario; sube el brazo hacia el costado hasta la altura del hombro.', { step: 2.5 }),
+    E('machine_lateral', 'Elevación Lateral en Máquina', 'Hombro · Deltoide lateral', 'stack', 'Hombro alineado con el eje de la máquina; sube con los codos sin encoger los hombros.'),
     // Sentadilla / prensa
-    E('leg_press', 'Prensa de Piernas Inclinada (45°)', 'Cuádriceps · Glúteos', 'plate', 'Bajá hasta ~90° de rodilla o más sin despegar la zona lumbar; empujá con todo el pie.'),
-    E('smith_squat', 'Sentadilla en Máquina Smith', 'Cuádriceps · Glúteos', 'smith', 'Pies un poco adelantados; bajá con el torso firme hasta muslos paralelos o más y subí empujando el piso.'),
-    E('hack_squat', 'Sentadilla Hack en Máquina', 'Cuádriceps · Glúteos', 'plate', 'Espalda pegada al respaldo; bajá profundo y controlado, subí sin bloquear de golpe las rodillas.'),
-    E('goblet_squat', 'Sentadilla Goblet con Mancuerna', 'Cuádriceps · Glúteos', 'db1', 'Mancuerna pegada al pecho; bajá entre las rodillas con el torso erguido.'),
+    E('leg_press', 'Prensa de Piernas Inclinada (45°)', 'Cuádriceps · Glúteos', 'plate', 'Baja hasta ~90° de rodilla o más sin despegar la zona lumbar; empuja con todo el pie.'),
+    E('smith_squat', 'Sentadilla en Máquina Smith', 'Cuádriceps · Glúteos', 'smith', 'Pies un poco adelantados; baja con el torso firme hasta muslos paralelos o más y sube empujando el piso.'),
+    E('hack_squat', 'Sentadilla Hack en Máquina', 'Cuádriceps · Glúteos', 'plate', 'Espalda pegada al respaldo; baja profundo y controlado, sube sin bloquear de golpe las rodillas.'),
+    E('goblet_squat', 'Sentadilla Goblet con Mancuerna', 'Cuádriceps · Glúteos', 'db1', 'Mancuerna pegada al pecho; baja entre las rodillas con el torso erguido.'),
     // Bisagra de cadera
     E('db_rdl', 'Peso Muerto Rumano con Mancuernas', 'Femoral · Glúteo', 'db', 'Rodillas apenas flexionadas; cadera atrás deslizando las mancuernas por los muslos hasta estirar el femoral.'),
-    E('smith_rdl', 'Peso Muerto Rumano en Smith', 'Femoral · Glúteo', 'smith', 'Cadera atrás con la espalda neutra y la barra pegada a las piernas; volvé apretando glúteos.'),
+    E('smith_rdl', 'Peso Muerto Rumano en Smith', 'Femoral · Glúteo', 'smith', 'Cadera atrás con la espalda neutra y la barra pegada a las piernas; vuelve apretando glúteos.'),
     E('bb_rdl', 'Peso Muerto Rumano con Barra', 'Femoral · Glúteo', 'bar', 'Barra pegada a las piernas; cadera atrás con la espalda neutra hasta sentir el femoral.'),
     // Extensión de rodilla
-    E('leg_ext', 'Extensión de Piernas en Máquina', 'Cuádriceps · Aislamiento', 'stack', 'Rodilla alineada con el eje; extendé completo, pausa de 1 s arriba y bajá lento.'),
+    E('leg_ext', 'Extensión de Piernas en Máquina', 'Cuádriceps · Aislamiento', 'stack', 'Rodilla alineada con el eje; extiende completo, pausa de 1 s arriba y baja lento.'),
     E('leg_ext_single', 'Extensión de Pierna Unilateral', 'Cuádriceps · Aislamiento', 'stack', 'Una pierna por vez; pausa arriba y bajada lenta.', { step: 2.5 }),
-    E('bulgarian', 'Sentadilla Búlgara con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Pie trasero sobre el banco; bajá vertical hasta que la rodilla de atrás casi toque el piso.'),
+    E('bulgarian', 'Sentadilla Búlgara con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Pie trasero sobre el banco; baja vertical hasta que la rodilla de atrás casi toque el piso.'),
     // Pantorrilla
-    E('smith_calf', 'Elevación de Talones de Pie en Smith', 'Pantorrilla', 'smith', 'Puntas sobre un escalón; bajá hasta estirar y subí al máximo con pausa arriba.'),
+    E('smith_calf', 'Elevación de Talones de Pie en Smith', 'Pantorrilla', 'smith', 'Puntas sobre un escalón; baja hasta estirar y sube al máximo con pausa arriba.'),
     E('press_calf', 'Elevación de Talones en Prensa', 'Pantorrilla', 'plate', 'Puntas en el borde de la plataforma; recorrido completo con pausa abajo.'),
-    E('seated_calf', 'Elevación de Talones Sentado en Máquina', 'Pantorrilla', 'plate', 'Rodillas bajo el rodillo; bajá el talón al máximo y subí con pausa.'),
+    E('seated_calf', 'Elevación de Talones Sentado en Máquina', 'Pantorrilla', 'plate', 'Rodillas bajo el rodillo; baja el talón al máximo y sube con pausa.'),
     // Press inclinado
-    E('smith_incline', 'Press Inclinado en Máquina Smith', 'Pecho superior / Tríceps', 'smith', 'Banco a 30–45° bajo la barra; bajá al pecho alto y empujá sin rebotar.'),
+    E('smith_incline', 'Press Inclinado en Máquina Smith', 'Pecho superior / Tríceps', 'smith', 'Banco a 30–45° bajo la barra; baja al pecho alto y empuja sin rebotar.'),
     E('machine_incline', 'Press Inclinado en Máquina', 'Pecho superior / Tríceps', 'stack', 'Asiento a la altura en que las manijas salen del pecho alto; recorrido completo.'),
     // Press vertical
-    E('db_ohp', 'Press Militar Sentado con Mancuernas', 'Hombros · Deltoides', 'db', 'Espalda apoyada; empujá desde la altura de las orejas con los codos un poco adelante.'),
+    E('db_ohp', 'Press Militar Sentado con Mancuernas', 'Hombros · Deltoides', 'db', 'Espalda apoyada; empuja desde la altura de las orejas con los codos un poco adelante.'),
     E('smith_ohp', 'Press Militar en Máquina Smith', 'Hombros · Deltoides', 'smith', 'Sentado con respaldo; barra desde el mentón hacia arriba sin arquear la zona lumbar.'),
-    E('machine_ohp', 'Press de Hombro en Máquina', 'Hombros · Deltoides', 'stack', 'Manijas a la altura de los hombros; empujá sin despegar la espalda del respaldo.'),
+    E('machine_ohp', 'Press de Hombro en Máquina', 'Hombros · Deltoides', 'stack', 'Manijas a la altura de los hombros; empuja sin despegar la espalda del respaldo.'),
     // Tríceps
-    E('cable_oh_ext', 'Extensión de Tríceps sobre la Cabeza en Polea', 'Tríceps · Cabeza larga', 'stack', 'De espaldas a la polea, brazos sobre la cabeza; extendé los codos sin moverlos de lugar.', { step: 2.5, hint: 'Orientación: sobre la cabeza se usa 34–39 % menos carga que en la extensión en polea alta (Maeo 2023).' }),
-    E('db_french', 'Press Francés con Mancuernas', 'Tríceps · Aislamiento', 'db', 'Acostado; bajá las mancuernas junto a la cabeza moviendo solo el codo y extendé completo.'),
-    E('db_oh_ext', 'Extensión de Tríceps sobre la Cabeza con Mancuerna', 'Tríceps · Cabeza larga', 'db1', 'Mancuerna con ambas manos detrás de la cabeza; codos hacia arriba y extendé completo.'),
-    E('cable_pushdown', 'Extensión de Tríceps en Polea Alta', 'Tríceps · Aislamiento', 'stack', 'Codos fijos a los costados; empujá hacia abajo hasta extender por completo.'),
+    E('cable_oh_ext', 'Extensión de Tríceps sobre la Cabeza en Polea', 'Tríceps · Cabeza larga', 'stack', 'De espaldas a la polea, brazos sobre la cabeza; extiende los codos sin moverlos de lugar.', { step: 2.5, hint: 'Orientación: sobre la cabeza se usa 34–39 % menos carga que en la extensión en polea alta (Maeo 2023).' }),
+    E('db_french', 'Press Francés con Mancuernas', 'Tríceps · Aislamiento', 'db', 'Acostado; baja las mancuernas junto a la cabeza moviendo solo el codo y extiende completo.'),
+    E('db_oh_ext', 'Extensión de Tríceps sobre la Cabeza con Mancuerna', 'Tríceps · Cabeza larga', 'db1', 'Mancuerna con ambas manos detrás de la cabeza; codos hacia arriba y extiende completo.'),
+    E('cable_pushdown', 'Extensión de Tríceps en Polea Alta', 'Tríceps · Aislamiento', 'stack', 'Codos fijos a los costados; empuja hacia abajo hasta extender por completo.'),
     // Aperturas
-    E('cable_fly', 'Cruce de Poleas (Aperturas)', 'Pecho · Aislamiento', 'stack', 'Codos levemente flexionados; abrí hasta sentir el estiramiento y juntá las manos frente al pecho.', { step: 2.5 }),
-    E('pec_deck', 'Aperturas en Pec Deck', 'Pecho · Aislamiento', 'stack', 'Codos a la altura del pecho; juntá los brazos sin despegar la espalda y volvé lento.'),
-    E('db_fly', 'Aperturas con Mancuernas', 'Pecho · Aislamiento', 'db', 'En banco plano; abrí en arco con los codos flexionados hasta estirar el pecho, sin bajar de más.'),
+    E('cable_fly', 'Cruce de Poleas (Aperturas)', 'Pecho · Aislamiento', 'stack', 'Codos levemente flexionados; abre hasta sentir el estiramiento y junta las manos frente al pecho.', { step: 2.5 }),
+    E('pec_deck', 'Aperturas en Pec Deck', 'Pecho · Aislamiento', 'stack', 'Codos a la altura del pecho; junta los brazos sin despegar la espalda y vuelve lento.'),
+    E('db_fly', 'Aperturas con Mancuernas', 'Pecho · Aislamiento', 'db', 'En banco plano; abre en arco con los codos flexionados hasta estirar el pecho, sin bajar de más.'),
     // Bíceps
-    E('db_curl', 'Curl de Bíceps con Mancuernas', 'Bíceps', 'db', 'Codos pegados al cuerpo; subí girando la muñeca hacia afuera (supinación) y bajá lento.'),
+    E('db_curl', 'Curl de Bíceps con Mancuernas', 'Bíceps', 'db', 'Codos pegados al cuerpo; sube girando la muñeca hacia afuera (supinación) y baja lento.'),
     E('incline_curl', 'Curl Inclinado con Mancuernas', 'Bíceps · Cabeza larga', 'db', 'Banco a ~45° con los brazos colgando detrás del torso; curl completo sin adelantar los codos.'),
-    E('cable_curl', 'Curl de Bíceps en Polea', 'Bíceps', 'stack', 'Polea baja; codos fijos, subí completo y bajá controlando.', { step: 2.5 }),
+    E('cable_curl', 'Curl de Bíceps en Polea', 'Bíceps', 'stack', 'Polea baja; codos fijos, sube completo y baja controlando.', { step: 2.5 }),
     E('ez_curl', 'Curl con Barra Z', 'Bíceps', 'bar', 'Agarre en la parte angulada; sin balancear el torso y con bajada lenta.'),
     // Deltoide posterior
-    E('face_pull', 'Face Pull en Polea', 'Deltoide posterior', 'stack', 'Polea a la altura de la cara con soga; tirá hacia la frente separando las manos.', { step: 2.5 }),
-    E('reverse_pec_deck', 'Pec Deck Invertido', 'Deltoide posterior', 'stack', 'De frente al respaldo; abrí los brazos hacia atrás con los codos casi estirados, sin encoger los hombros.'),
-    E('db_rear_fly', 'Pájaros con Mancuernas', 'Deltoide posterior', 'db', 'Torso inclinado hacia adelante; abrí los brazos hacia los costados con los codos levemente flexionados.'),
+    E('face_pull', 'Face Pull en Polea', 'Deltoide posterior', 'stack', 'Polea a la altura de la cara con soga; tira hacia la frente separando las manos.', { step: 2.5 }),
+    E('reverse_pec_deck', 'Pec Deck Invertido', 'Deltoide posterior', 'stack', 'De frente al respaldo; abre los brazos hacia atrás con los codos casi estirados, sin encoger los hombros.'),
+    E('db_rear_fly', 'Pájaros con Mancuernas', 'Deltoide posterior', 'db', 'Torso inclinado hacia adelante; abre los brazos hacia los costados con los codos levemente flexionados.'),
     // Glúteo
-    E('smith_hip_thrust', 'Hip Thrust en Máquina Smith', 'Glúteo', 'smith', 'Espalda alta sobre el banco y barra sobre la cadera (con almohadilla); extendé la cadera y apretá glúteos.'),
+    E('smith_hip_thrust', 'Hip Thrust en Máquina Smith', 'Glúteo', 'smith', 'Espalda alta sobre el banco y barra sobre la cadera (con almohadilla); extiende la cadera y aprieta glúteos.'),
     E('bb_hip_thrust', 'Hip Thrust con Barra', 'Glúteo', 'bar', 'Mentón al pecho y tibias verticales arriba; pausa de 1 s en la extensión.'),
     E('machine_hip_thrust', 'Hip Thrust en Máquina', 'Glúteo', 'plate', 'Almohadilla sobre la cadera; extensión completa con pausa arriba.'),
     // Curl femoral
-    E('seated_leg_curl', 'Curl Femoral Sentado', 'Femoral · Isquiotibiales', 'stack', 'Muslo bien sujeto y cadera flexionada (más estiramiento del femoral); flexioná completo y volvé lento.'),
-    E('lying_leg_curl', 'Curl Femoral Tumbado', 'Femoral · Isquiotibiales', 'stack', 'Cadera pegada al banco; llevá los talones hacia el glúteo y bajá lento.', { aliases: ['Curl Femoral Controlado'] }),
-    E('standing_leg_curl', 'Curl Femoral de Pie (Unilateral)', 'Femoral · Isquiotibiales', 'stack', 'Una pierna por vez con la cadera quieta; flexioná completo y bajá controlado.', { step: 2.5 }),
+    E('seated_leg_curl', 'Curl Femoral Sentado', 'Femoral · Isquiotibiales', 'stack', 'Muslo bien sujeto y cadera flexionada (más estiramiento del femoral); flexiona completo y vuelve lento.'),
+    E('lying_leg_curl', 'Curl Femoral Tumbado', 'Femoral · Isquiotibiales', 'stack', 'Cadera pegada al banco; lleva los talones hacia el glúteo y baja lento.', { aliases: ['Curl Femoral Controlado'] }),
+    E('standing_leg_curl', 'Curl Femoral de Pie (Unilateral)', 'Femoral · Isquiotibiales', 'stack', 'Una pierna por vez con la cadera quieta; flexiona completo y baja controlado.', { step: 2.5 }),
     // Unilateral de pierna
     E('walking_lunge', 'Zancadas Caminando con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Pasos largos; la rodilla de atrás casi toca el piso y el torso va erguido.'),
     E('single_leg_press', 'Prensa a Una Pierna', 'Cuádriceps · Glúteo', 'plate', 'Un pie en el centro de la plataforma; recorrido completo sin despegar la cadera.'),
@@ -284,7 +284,7 @@
       return {
         kind: 'first', weight: null, reps: fill(n, clamp(lo + 2, lo, hi)), last: null, days: null,
         ref: referenceFromEquivalents(sessions, slot, ex.id),
-        msg: 'Elegí un peso con el que llegues al objetivo dejando 2 repeticiones en reserva.',
+        msg: 'Elige un peso con el que llegues al objetivo dejando 2 repeticiones en reserva.',
       };
     }
     const inverse = !!equipOf(ex).inverse;
@@ -295,7 +295,7 @@
 
     if (ws.w == null) {
       const reps = ws.reps.length ? ws.reps : [lo];
-      return Object.assign(base, { kind: 'noweight', weight: null, reps: fill(n, 0).map((_, i) => clamp((reps[i] != null ? reps[i] : reps[reps.length - 1]) + 1, lo, hi)), msg: 'La última vez no anotaste el peso: usá el mismo y sumá 1 repetición.' });
+      return Object.assign(base, { kind: 'noweight', weight: null, reps: fill(n, 0).map((_, i) => clamp((reps[i] != null ? reps[i] : reps[reps.length - 1]) + 1, lo, hi)), msg: 'La última vez no anotaste el peso: usa el mismo y suma 1 repetición.' });
     }
     const prog = progression(ex, ws, lo, hi, n, inverse, g);
     if (days > 14) {
@@ -303,7 +303,7 @@
       // (reps muy por encima del techo) se parte del salto estimado o de la bajada.
       const ref = prog.kind === 'jump' || prog.kind === 'decrease' ? prog.weight : ws.w;
       const w = inverse ? r2(Math.max(ref, roundNear(ref / 0.9, g))) : r2(Math.min(ref, roundNear(ref * 0.9, g)));
-      return Object.assign(base, { kind: 'return', weight: w, reps: fill(n, clamp(lo + 2, lo, hi)), msg: 'Volvés tras ' + days + ' días sin este ejercicio: ~90 % de la carga y reconstruí reps.' });
+      return Object.assign(base, { kind: 'return', weight: w, reps: fill(n, clamp(lo + 2, lo, hi)), msg: 'Vuelves tras ' + days + ' días sin este ejercicio: ~90 % de la carga y reconstruye reps.' });
     }
     return Object.assign(base, prog);
   }
@@ -320,18 +320,18 @@
         const target = Math.round((lo + hi) / 2);
         const est = Math.min(e1 / (1 + target / 30), ws.w * 1.3);
         const w = Math.max(roundDown(est, g), r2(ws.w + up));
-        return { kind: 'jump', weight: w, reps: fill(n, lo), msg: 'Hiciste muchas más reps que el techo (' + hi + '): salto de carga estimado. Empezá en ' + lo + ' reps.' };
+        return { kind: 'jump', weight: w, reps: fill(n, lo), msg: 'Hiciste muchas más reps que el techo (' + hi + '): salto de carga estimado. Empieza en ' + lo + ' reps.' };
       }
       const w = inverse ? r2(Math.max(0, ws.w - up)) : r2(ws.w + up);
       const extra = equipOf(ex).step || ex.step ? '' : ' (o el par más cercano disponible)';
-      return { kind: 'increase', weight: w, reps: fill(n, lo), msg: 'Llegaste al techo (' + hi + ') en todas las series: subí la carga' + extra + ' y empezá en ' + lo + ' reps.' };
+      return { kind: 'increase', weight: w, reps: fill(n, lo), msg: 'Llegaste al techo (' + hi + ') en todas las series: sube la carga' + extra + ' y empieza en ' + lo + ' reps.' };
     }
     if (below >= 2) {
       const w = inverse ? r2(Math.max(ws.w + g, roundNear(ws.w * 1.1, g))) : r2(Math.max(g, Math.min(ws.w - g, roundNear(ws.w * 0.9, g))));
-      return { kind: 'decrease', weight: w, reps: fill(n, lo), msg: 'Quedaste por debajo de ' + lo + ' reps en 2 o más series: bajá ~10 % y construí reps.' };
+      return { kind: 'decrease', weight: w, reps: fill(n, lo), msg: 'Quedaste por debajo de ' + lo + ' reps en 2 o más series: baja ~10 % y construye reps.' };
     }
     const targets = fill(n, 0).map((_, i) => clamp((reps[i] != null ? reps[i] : reps[reps.length - 1]) + 1, lo, hi));
-    return { kind: 'repeat', weight: ws.w, reps: targets, msg: 'Mismo peso: sumá 1 repetición por serie hasta llegar a ' + hi + '.' };
+    return { kind: 'repeat', weight: ws.w, reps: targets, msg: 'Mismo peso: suma 1 repetición por serie hasta llegar a ' + hi + '.' };
   }
 
   // ---------- Borradores y sesiones ----------

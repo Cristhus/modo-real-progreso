@@ -275,7 +275,7 @@ const { EXERCISES, ROUTINE, DAYS } = M;
 const LS_KEY = 'mrp_state_v2';
 const COLORS = { upper: 'var(--upper)', legs: 'var(--legs)', push: 'var(--push)', pull: 'var(--pull)' };
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const REC_LABEL = { first: '★ Primera vez', noweight: 'Sin peso anotado', return: '⟲ Vuelta tras pausa', increase: '↑ Subí carga', jump: '↑↑ Salto de carga', decrease: '↓ Bajá carga', repeat: '→ +1 rep' };
+const REC_LABEL = { first: '★ Primera vez', noweight: 'Sin peso anotado', return: '⟲ Vuelta tras pausa', increase: '↑ Sube carga', jump: '↑↑ Salto de carga', decrease: '↓ Baja carga', repeat: '→ +1 rep' };
 
 const $ = (s, el) => (el || document).querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -395,7 +395,7 @@ function renderBanner() {
   const nb = needsBackup();
   $('#menu-dot').hidden = !nb;
   $('#banner').innerHTML = nb
-    ? `<div class="banner"><span>Tenés ${state.sessions.length - state.settings.lastBackupCount} sesiones sin respaldo.</span><button class="btn" data-act="backup">Respaldar</button></div>`
+    ? `<div class="banner"><span>Tienes ${state.sessions.length - state.settings.lastBackupCount} sesiones sin respaldo.</span><button class="btn" data-act="backup">Respaldar</button></div>`
     : '';
 }
 
@@ -423,9 +423,9 @@ function syncWeightHints(setsEl) {
 }
 
 function restHtml() {
-  return `<section class="panel"><div class="rest-day"><h2>Hoy descansás</h2>
-    <p>Sábado y domingo son de recuperación: el músculo crece descansando. Dormí bien e hidratate.<br>
-    Si te perdiste un día, elegilo arriba y hacelo igual: se guarda con la fecha de hoy.</p></div></section>`;
+  return `<section class="panel"><div class="rest-day"><h2>Hoy descansas</h2>
+    <p>Sábado y domingo son de recuperación: el músculo crece descansando. Duerme bien e hidrátate.<br>
+    Si te perdiste un día, elígelo arriba y hazlo igual: se guarda con la fecha de hoy.</p></div></section>`;
 }
 
 function dayHtml(day) {
@@ -437,7 +437,7 @@ function dayHtml(day) {
     <div class="progress-wrap"><div class="progress-label"><span>Progreso de la sesión</span><span id="prog-txt"></span></div><div class="progress"><i id="prog-bar"></i></div></div>
     <details class="warm"><summary>Calentamiento y reglas</summary>
       <p>5 min de movilidad o cardio suave + 2 series de aproximación en el primer ejercicio (≈50 % y ≈75 % del peso, pocas reps; no se anotan).
-      Trabajá dejando 1–2 repeticiones en reserva. Si una máquina está ocupada, tocá <b>⇄ Cambiar</b>. Marcá ✓ al terminar cada serie: si dejás un campo vacío, se completa con lo sugerido (en gris).</p>
+      Trabaja dejando 1–2 repeticiones en reserva. Si una máquina está ocupada, toca <b>⇄ Cambiar</b>. Marca ✓ al terminar cada serie: si dejas un campo vacío, se completa con lo sugerido (en gris).</p>
     </details>
   </div>`;
   day.slots.forEach((slot, i) => { html += slotHtml(day, slot, i, draft); });
@@ -459,7 +459,7 @@ function slotHtml(day, slot, idx, draft) {
       <button class="swap" data-act="swap" aria-label="Cambiar ${esc(slot.label)} por un ejercicio equivalente">⇄ Cambiar</button></div>
     <h3>${esc(ex.name)}</h3>
     <div class="meta"><span class="tag">${esc(ex.tag)}</span><span>${slot.sets} × ${slot.range[0]}–${slot.range[1]} · descanso ${mmss(slot.rest)}</span></div>
-    <div class="unit">Anotá: <b>${esc(M.equipOf(ex).unit)}</b></div>
+    <div class="unit">Anota: <b>${esc(M.equipOf(ex).unit)}</b></div>
     ${recHtml(rec, ex)}
     ${others.length ? `<div class="also">También hoy: ${others.map(id => esc(getEx(id).name) + ' (' + sd.byEx[id].filter(M.rowCounts).length + ' series)').join(', ')}</div>` : ''}
     <div class="sets">${rows.map((row, i) => rowHtml(row, i, rec)).join('')}</div>
@@ -526,7 +526,7 @@ function savedHtml(day, s) {
 function historyHtml() {
   const list = M.sortSessions(state.sessions).reverse();
   let html = `<section class="view"><div class="view-head"><button class="btn" data-act="back">← Volver</button><h2>Historial</h2><span class="muted">${list.length} sesiones</span></div>`;
-  if (!list.length) html += '<p class="empty">Todavía no hay sesiones. Importá tus TXT o un respaldo desde el menú (☰).</p>';
+  if (!list.length) html += '<p class="empty">Todavía no hay sesiones. Importa tus TXT o un respaldo desde el menú (☰).</p>';
   for (const s of list) {
     const day = s.dayId && DAYS[s.dayId];
     html += `<article class="hcard" style="--bc:${day ? COLORS[day.color] : 'var(--steel-600)'}">
@@ -727,7 +727,7 @@ A.check = t => {
         const f = wIn.parentElement;
         f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
         wIn.focus();
-        toast('Anotá el peso de esta serie');
+        toast('Anota el peso de esta serie');
         return;
       }
       c.row.w = w; wIn.value = w;
@@ -756,7 +756,7 @@ A.addset = t => {
 A.rmset = t => {
   const c = rowCtx(t);
   if (c.rows.length <= 1) return;
-  if (c.rows[c.rows.length - 1].done) { toast('La última serie está marcada: desmarcala primero'); return; }
+  if (c.rows[c.rows.length - 1].done) { toast('La última serie está marcada: desmárcala primero'); return; }
   c.rows.pop();
   Store.save();
   rerenderCard(c.slot.id);
@@ -785,7 +785,7 @@ function openSwap(slotId) {
       </button>
       <button class="star${id === primary ? ' on' : ''}" data-act="star" data-slot="${slot.id}" data-ex="${id}" aria-label="Fijar ${esc(ex.name)} como principal" aria-pressed="${id === primary}">★</button></li>`;
   }
-  html += `</ul><p class="sheet-note">★ fija el ejercicio que aparece por defecto. Usá el principal y cambiá solo cuando haga falta: rotar al azar rinde menos (Kassiano 2022). El peso no se convierte entre equipos distintos.</p>
+  html += `</ul><p class="sheet-note">★ fija el ejercicio que aparece por defecto. Usa el principal y cambia solo cuando haga falta: rotar al azar rinde menos (Kassiano 2022). El peso no se convierte entre equipos distintos.</p>
   <button class="btn block" data-act="close-sheet">Cerrar</button>`;
   openSheet(html);
 }
@@ -812,7 +812,7 @@ A.finish = () => {
   const day = DAYS[ui.day];
   const draft = getDraft(day, false);
   const s = draft && M.sessionFromDraft(day, draft, Date.now());
-  if (!s) { toast('Marcá al menos una serie ✓ para guardar'); return; }
+  if (!s) { toast('Marca al menos una serie ✓ para guardar'); return; }
   state.sessions = M.upsertSession(state.sessions, s);
   delete state.drafts[day.id];
   Store.save(true);
@@ -830,7 +830,7 @@ A.reopen = t => {
   state.sessions = state.sessions.filter(x => x.id !== s.id);
   Store.save(true);
   render();
-  toast('Sesión reabierta: editá y volvé a guardar');
+  toast('Sesión reabierta: edita y vuelve a guardar');
 };
 A['reset-day'] = async () => {
   const ok = await ask('¿Reiniciar el día?', 'Se borran las series anotadas hoy en este día. El historial no se toca.', 'Sí, reiniciar');
@@ -864,7 +864,7 @@ A.menu = () => {
     <button class="mitem" data-act="paste">Pegar texto <small>TXT o JSON</small></button>
     <label class="mitem"><span>Temporizador de descanso</span><input type="checkbox" data-act="toggle-timer"${s.timer ? ' checked' : ''}></label>
     ${ui.installEvt ? '<button class="mitem" data-act="install">Instalar app en el teléfono</button>' : ''}
-    ${ios ? '<div class="mstatus">En iPhone: tocá Compartir → “Agregar a inicio” para instalarla.</div>' : ''}
+    ${ios ? '<div class="mstatus">En iPhone: toca Compartir → “Agregar a inicio” para instalarla.</div>' : ''}
     <button class="mitem" data-act="view-refs">Referencias científicas</button>
     <div class="mstatus" id="storage-status">Guardado: comprobando…</div>
     <button class="mitem danger" data-act="wipe">Borrar todo el historial</button>
@@ -878,7 +878,7 @@ async function storageStatus() {
   try { persisted = !!(navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()); } catch (e) { /* no soportado */ }
   el.innerHTML = persisted
     ? 'Guardado: <b>persistente ✓</b> — el navegador no lo borra solo. Igual conviene un respaldo cada tanto.'
-    : 'Guardado: normal — si el teléfono se queda sin espacio, el navegador podría borrarlo. Instalá la app y hacé respaldos.<br><button class="btn" data-act="persist">Pedir guardado persistente</button>';
+    : 'Guardado: normal — si el teléfono se queda sin espacio, el navegador podría borrarlo. Instala la app y haz respaldos.<br><button class="btn" data-act="persist">Pedir guardado persistente</button>';
 }
 A.persist = async () => {
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* no soportado */ }
@@ -906,7 +906,7 @@ A['export-all'] = () => {
   download('historial_gym_' + today + '.txt', M.buildAllTxt(state.sessions, state.custom));
 };
 A.backup = () => {
-  openSheet(`<div class="sheet-h"><h3>Respaldo completo</h3><p>Un archivo con todo tu historial (${state.sessions.length} sesiones). Guardalo en Drive, OneDrive o mandátelo por mail: con “Importar” lo recuperás en cualquier teléfono.</p></div>
+  openSheet(`<div class="sheet-h"><h3>Respaldo completo</h3><p>Un archivo con todo tu historial (${state.sessions.length} sesiones). Guárdalo en Drive, OneDrive o envíatelo por mail: con “Importar” lo recuperas en cualquier teléfono.</p></div>
   <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="backup-share">Compartir (Drive, Gmail…)</button><button class="btn" data-act="backup-dl">Descargar archivo</button></div>
   <div class="row-btns"><button class="btn ghost block" data-act="close-sheet">Cerrar</button></div>`);
 };
@@ -935,7 +935,7 @@ $('#file-in').addEventListener('change', async e => {
   importTexts(texts);
 });
 A.paste = () => {
-  openSheet(`<div class="sheet-h"><h3>Pegar texto</h3><p>Pegá el contenido de uno o varios TXT exportados, o de un respaldo JSON.</p></div>
+  openSheet(`<div class="sheet-h"><h3>Pegar texto</h3><p>Pega el contenido de uno o varios TXT exportados, o de un respaldo JSON.</p></div>
   <textarea class="paste" id="paste-box" placeholder="FECHA: 2026-10-01&#10;BLOQUE: PUSH&#10;…"></textarea>
   <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="paste-go">Importar</button><button class="btn ghost" data-act="close-sheet">Cancelar</button></div>`);
 };
@@ -981,7 +981,7 @@ function importTexts(texts) {
 }
 
 A.wipe = async () => {
-  if (!await ask('¿Borrar todo el historial?', 'Se eliminan TODAS las sesiones guardadas en este teléfono. Hacé un respaldo antes si querés conservarlas.', 'Continuar')) return;
+  if (!await ask('¿Borrar todo el historial?', 'Se eliminan TODAS las sesiones guardadas en este teléfono. Haz un respaldo antes si quieres conservarlas.', 'Continuar')) return;
   if (!await ask('Última confirmación', 'Esto no se puede deshacer. ¿Borrar definitivamente ' + state.sessions.length + ' sesiones?', 'Borrar todo')) return;
   state.sessions = []; state.drafts = {};
   Store.save(true);
@@ -998,7 +998,7 @@ A['h-swap'] = t => {
   if (!en) return;
   let ids = equivalentsOf(en.exId);
   if (!ids.length) ids = M.EXERCISE_LIST.map(e => e.id).filter(id => id !== en.exId);
-  openSheet(`<div class="sheet-h"><h3>Corregir ejercicio</h3><p>Registrado como <b>${esc(M.exName(en.exId, state.custom))}</b> (${esc(M.formatSets(en.sets))}). Elegí el que realmente hiciste: los pesos y reps no cambian.</p></div>
+  openSheet(`<div class="sheet-h"><h3>Corregir ejercicio</h3><p>Registrado como <b>${esc(M.exName(en.exId, state.custom))}</b> (${esc(M.formatSets(en.sets))}). Elige el que realmente hiciste: los pesos y reps no cambian.</p></div>
   <ul class="opts">${ids.map(id => `<li><button class="opt-pick" data-act="h-pick" data-sid="${esc(s.id)}" data-ei="${ei}" data-ex="${id}"><span class="opt-name">${esc(getEx(id).name)}</span><small>${esc(M.equipOf(getEx(id)).unit)}</small></button></li>`).join('')}</ul>
   <button class="btn block" data-act="close-sheet">Cancelar</button>`);
 };
