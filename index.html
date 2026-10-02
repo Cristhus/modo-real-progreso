@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#14171B">
+<meta name="description" content="Registro de entrenamiento lunes a viernes con ejercicios equivalentes intercambiables y progresión sugerida.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gym MRP">
+<title>Modo Real Progreso</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<style>
+:root{
+  --steel-950:#14171B; --steel-900:#191D22; --steel-800:#20262D; --steel-700:#2C343E; --steel-600:#3A4450;
+  --chalk:#ECE9E2; --chalk-dim:#A6ADB8; --muted:#7B8492;
+  /* Colores de discos de competencia (IPF) */
+  --push:#E24A4A; --pull:#3E7BD6; --legs:#E8B63B; --upper:#43B37A;
+  --force:#46C07A; --danger:#E24A4A;
+  --radius:14px;
+  --display:'Anton', Impact, 'Arial Narrow', sans-serif;
+  --cond:'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --body:'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme:dark;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--steel-950);
+  background-image:radial-gradient(1200px 500px at 50% -10%, rgba(62,123,214,.08), transparent 60%);
+  color:var(--chalk);font-family:var(--body);line-height:1.5;min-height:100vh;
+  -webkit-tap-highlight-color:transparent;
+}
+html.has-timer{scroll-padding-bottom:90px}
+html.has-timer body{padding-bottom:80px}
+button{font:inherit;color:inherit}
+a{color:inherit}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 60px;padding-top:env(safe-area-inset-top)}
+[hidden]{display:none !important}
+
+/* ===== HEADER ===== */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 0 4px}
+.eyebrow{font-family:var(--cond);font-weight:600;letter-spacing:.2em;text-transform:uppercase;font-size:.7rem;color:var(--muted)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(1.9rem,8vw,2.7rem);line-height:1;text-transform:uppercase;letter-spacing:.01em;margin-top:.2rem}
+h1 .accent{color:var(--push)}
+.iconbtn{position:relative;flex:none;width:46px;height:46px;border-radius:12px;border:1px solid var(--steel-600);background:var(--steel-800);font-size:1.35rem;cursor:pointer}
+.iconbtn .dot{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--legs);box-shadow:0 0 8px var(--legs)}
+.banner{margin-top:12px;display:flex;align-items:center;gap:10px;justify-content:space-between;background:color-mix(in srgb,var(--legs) 12%,var(--steel-900));border:1px solid color-mix(in srgb,var(--legs) 45%,transparent);border-radius:10px;padding:9px 12px;font-size:.88rem;color:var(--chalk)}
+.banner .btn{padding:7px 12px;flex:none}
+
+/* ===== NAV DE DÍAS: DISCOS ===== */
+nav.days{display:flex;gap:6px;justify-content:space-between;align-items:center;padding:16px 0 6px;max-width:400px;margin:0 auto}
+.plate{
+  --c:var(--steel-600);
+  --pw:min(66px, calc((100vw - 64px) / 5));
+  flex:none;width:var(--pw);height:var(--pw);border-radius:50%;padding:0;
+  background:radial-gradient(circle closest-side at 50% 50%, var(--steel-900) 0 22%, rgba(0,0,0,.28) 23% 31%, transparent 32%),radial-gradient(circle at 50% 36%, rgba(255,255,255,.16), transparent 60%),var(--c);
+  border:3px solid rgba(0,0,0,.35);box-shadow:inset 0 0 0 4px rgba(0,0,0,.16),0 5px 12px rgba(0,0,0,.45);
+  color:#fff;cursor:pointer;position:relative;display:block;
+  font-family:var(--cond);font-weight:700;transition:transform .18s ease, filter .18s ease;
+}
+.plate small,.plate b{position:absolute;left:0;right:0;text-align:center;line-height:1;text-transform:uppercase;white-space:nowrap}
+.plate small{top:12%;font-size:.66rem;letter-spacing:.1em}
+.plate b{bottom:13%;font-size:.62rem;letter-spacing:.02em}
+.plate[aria-selected="true"]{transform:translateY(-4px) scale(1.07);filter:drop-shadow(0 0 12px color-mix(in srgb,var(--c) 65%,transparent))}
+.plate[aria-selected="true"]::after{content:"";position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);width:26px;height:4px;border-radius:2px;background:var(--c)}
+.plate .today{position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:var(--chalk);border:2px solid var(--steel-950)}
+.plate .ok{position:absolute;bottom:-4px;right:-4px;width:20px;height:20px;border-radius:50%;background:var(--force);color:#0d1f14;font-size:.75rem;display:flex;align-items:center;justify-content:center;border:2px solid var(--steel-950)}
+.plate.upper{--c:var(--upper)} .plate.push{--c:var(--push)} .plate.pull{--c:var(--pull)} .plate.legs{--c:var(--legs);color:#1c1a12}
+.plate:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.plate,.plate[aria-selected="true"]{transition:none;transform:none}}
+
+/* ===== BANNER DEL DÍA ===== */
+.block-banner{margin:22px 0 16px;border-radius:var(--radius);border:1px solid var(--steel-700);background:linear-gradient(120deg,var(--steel-800),var(--steel-900));padding:16px 18px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;border-left:6px solid var(--bc)}
+.block-banner h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.65rem;letter-spacing:.02em;line-height:1}
+.focus{font-family:var(--cond);color:var(--chalk-dim);font-size:.95rem;letter-spacing:.04em}
+.goal{margin-left:auto;text-align:right;font-family:var(--cond);color:var(--chalk-dim);font-size:.9rem;line-height:1.25}
+.goal b{color:var(--chalk);font-size:1.1rem}
+.progress-wrap{width:100%}
+.progress-label{display:flex;justify-content:space-between;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.progress{height:8px;border-radius:6px;background:var(--steel-700);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--bc);transition:width .3s ease;border-radius:6px}
+details.warm{width:100%;font-size:.88rem;color:var(--chalk-dim)}
+details.warm summary{cursor:pointer;font-family:var(--cond);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:.78rem;color:var(--chalk-dim)}
+details.warm p{margin-top:6px}
+
+/* ===== CARDS ===== */
+.card{background:var(--steel-800);border:1px solid var(--steel-700);border-radius:var(--radius);margin-bottom:16px;padding:14px 14px 12px}
+.card.optional{border-style:dashed}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.slotnum{width:24px;height:24px;border-radius:50%;background:var(--bc);color:#111;font-family:var(--cond);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:.85rem;flex:none}
+.slotlabel{font-family:var(--cond);font-weight:600;letter-spacing:.1em;text-transform:uppercase;font-size:.78rem;color:var(--chalk-dim)}
+.opt{font-family:var(--cond);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--steel-600);border-radius:5px;padding:1px 6px;color:var(--muted)}
+.swap{margin-left:auto;flex:none;font-family:var(--cond);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.85rem;padding:8px 12px;border-radius:9px;border:1px solid color-mix(in srgb,var(--bc) 60%,transparent);background:color-mix(in srgb,var(--bc) 14%,var(--steel-900));cursor:pointer}
+.card h3{font-family:var(--cond);font-weight:600;font-size:1.32rem;letter-spacing:.01em;line-height:1.15;margin-bottom:6px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-family:var(--cond);font-size:.9rem;color:var(--chalk-dim);letter-spacing:.03em}
+.tag{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:5px;background:color-mix(in srgb,var(--bc) 18%,transparent);color:var(--bc)}
+.panel[data-color="legs"] .tag{color:var(--legs)}
+.unit{font-size:.82rem;color:var(--muted);margin:6px 0 8px}
+.unit b{color:var(--chalk-dim);font-weight:600}
+
+/* Recomendación */
+.rec{border-left:3px solid var(--chalk-dim);background:var(--steel-900);border-radius:0 9px 9px 0;padding:8px 11px;margin-bottom:10px;font-size:.88rem;color:var(--chalk-dim)}
+.rec b{color:var(--chalk)}
+.rec-next{margin-top:3px;font-size:.98rem;color:var(--chalk)}
+.rk{display:inline-block;font-family:var(--cond);font-weight:700;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--steel-700);margin-right:4px;vertical-align:1px}
+.rec-msg{font-size:.82rem;margin-top:3px}
+.rec-ref{font-size:.8rem;margin-top:5px;color:var(--muted)}
+.rec-increase,.rec-jump{border-left-color:var(--force)} .rec-increase .rk,.rec-jump .rk{background:color-mix(in srgb,var(--force) 25%,var(--steel-800))}
+.rec-decrease{border-left-color:var(--legs)} .rec-decrease .rk{background:color-mix(in srgb,var(--legs) 25%,var(--steel-800))}
+.rec-return{border-left-color:var(--pull)} .rec-return .rk{background:color-mix(in srgb,var(--pull) 30%,var(--steel-800))}
+.rec-first,.rec-noweight{border-left-color:var(--muted)}
+.also{font-size:.8rem;color:var(--chalk-dim);margin:-4px 0 8px}
+
+/* Filas de series */
+.sets{display:flex;flex-direction:column;gap:7px;margin-bottom:10px}
+.setrow{display:grid;grid-template-columns:34px 1fr 1fr 52px;gap:7px;align-items:stretch;background:var(--steel-900);border:1px solid var(--steel-700);border-radius:10px;padding:5px 6px;transition:border-color .2s, background .2s}
+.setrow.done{border-color:var(--bc);background:color-mix(in srgb,var(--bc) 10%,var(--steel-900))}
+.setnum{display:flex;align-items:center;justify-content:center;font-family:var(--cond);font-weight:700;font-size:.92rem;color:var(--muted)}
+.setrow.done .setnum{color:var(--bc)}
+.field{position:relative;display:flex;min-width:0}
+.field input{width:100%;min-width:0;height:46px;background:var(--steel-800);border:1px solid var(--steel-600);border-radius:8px;color:var(--chalk);font-family:var(--cond);font-weight:700;font-size:1.2rem;letter-spacing:.02em;padding:0 38px 0 10px;text-align:right}
+.field input::placeholder{color:#5d6876;font-weight:600}
+.field input:focus{outline:none;border-color:var(--bc);box-shadow:0 0 0 2px color-mix(in srgb,var(--bc) 30%,transparent)}
+.field em{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-style:normal;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.field.flash input{border-color:var(--legs);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.setcheck{border:2px solid var(--steel-600);border-radius:9px;background:transparent;color:var(--steel-600);font-size:1.3rem;font-weight:700;cursor:pointer;transition:all .15s;line-height:1}
+.setrow.done .setcheck{background:var(--bc);border-color:var(--bc);color:#fff}
+.panel[data-color="legs"] .setrow.done .setcheck,.panel[data-color="legs"] .slotnum{color:#1c1a12}
+.setcheck:focus-visible,.swap:focus-visible,.mini:focus-visible,.btn:focus-visible{outline:2px solid var(--chalk);outline-offset:2px}
+
+.card-actions{display:flex;flex-wrap:wrap;gap:6px}
+.mini{font-family:var(--cond);font-weight:600;font-size:.82rem;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;padding:7px 10px;border-radius:8px;border:1px solid var(--steel-600);background:var(--steel-900);cursor:pointer;color:var(--chalk-dim)}
+.mini:disabled{opacity:.4;cursor:default}
+.mini.link{margin-left:auto}
+.mini.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 50%,transparent)}
+.perf{list-style:none;margin-top:8px;border-top:1px solid var(--steel-700);padding-top:6px;font-size:.85rem}
+.perf li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;color:var(--chalk-dim)}
+.perf li b{color:var(--chalk);font-weight:600;text-align:right}
+.cue{font-size:.82rem;color:var(--muted);margin-top:8px}
+
+/* Botones */
+.btn{font-family:var(--cond);font-weight:700;font-size:.92rem;letter-spacing:.07em;text-transform:uppercase;text-decoration:none;padding:11px 16px;border-radius:10px;border:1px solid var(--steel-600);color:var(--chalk);background:var(--steel-900);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--bc,var(--push));border-color:transparent;color:#fff}
+.btn.ghost{background:transparent;color:var(--chalk-dim)}
+.btn.danger{background:var(--danger);border-color:transparent;color:#fff}
+.btn.block{width:100%}
+.row-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.row-btns .btn{flex:1 1 auto}
+.export-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:8px 0 4px;padding:17px 20px;border:none;border-radius:var(--radius);cursor:pointer;background:var(--bc);color:#fff;font-family:var(--cond);font-weight:700;font-size:1.06rem;letter-spacing:.16em;text-transform:uppercase;box-shadow:0 8px 22px color-mix(in srgb,var(--bc) 32%,transparent)}
+.panel[data-color="legs"] .export-btn,.panel[data-color="legs"] .btn.primary{color:#1c1a12}
+
+/* Sesión guardada / historial */
+.saved{background:var(--steel-800);border:1px solid var(--bc);border-radius:var(--radius);padding:16px}
+.saved-h{font-family:var(--cond);font-weight:700;font-size:1.15rem;letter-spacing:.04em;color:var(--bc);margin-bottom:8px}
+.entries{list-style:none}
+.entries li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--steel-700)}
+.entries li:last-child{border-bottom:none}
+.en-name{display:block;font-weight:600}
+.entries small{display:block;color:var(--chalk-dim);font-size:.85rem}
+.entries small.note{color:var(--muted);font-style:italic}
+.view-head{display:flex;align-items:center;gap:12px;margin:18px 0 14px}
+.view-head h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.6rem;flex:1}
+.muted{color:var(--muted);font-size:.85rem}
+.hcard{background:var(--steel-800);border:1px solid var(--steel-700);border-left:5px solid var(--bc);border-radius:12px;padding:12px 14px;margin-bottom:12px}
+.hcard header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.chip{font-family:var(--cond);font-weight:700;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;padding:2px 8px;border-radius:5px;background:var(--steel-700);color:var(--chalk-dim)}
+.hcard footer{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.empty{color:var(--chalk-dim);text-align:center;padding:40px 10px;border:1px dashed var(--steel-600);border-radius:var(--radius)}
+.refs{list-style:none}
+.refs li{background:var(--steel-800);border:1px solid var(--steel-700);border-radius:12px;padding:12px 14px;margin-bottom:10px;font-size:.9rem}
+.refs b{display:block;margin-bottom:3px}
+.refs p{color:var(--chalk-dim)}
+.refs a{color:var(--pull);font-size:.85rem;word-break:break-all}
+.rest-day{text-align:center;padding:50px 18px;border:1px dashed var(--steel-600);border-radius:var(--radius);color:var(--chalk-dim);margin-top:22px}
+.rest-day h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.9rem;color:var(--chalk);margin-bottom:8px}
+
+/* Hoja inferior (sheet) */
+.sheet-wrap{position:fixed;inset:0;z-index:50;background:rgba(10,12,15,.72);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:720px;max-height:88vh;overflow-y:auto;background:var(--steel-900);border:1px solid var(--steel-700);border-bottom:none;border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));animation:up .2s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.4}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet-h h3{font-family:var(--cond);font-weight:700;font-size:1.3rem;letter-spacing:.03em}
+.sheet-h p{color:var(--chalk-dim);font-size:.88rem;margin:4px 0 10px}
+.opts{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.opts li{display:flex;gap:8px;align-items:stretch}
+.opt-pick{flex:1;text-align:left;background:var(--steel-800);border:1px solid var(--steel-700);border-radius:10px;padding:10px 12px;cursor:pointer}
+.opts li.cur .opt-pick{border-color:var(--chalk-dim)}
+.opt-name{display:block;font-weight:600;font-size:1rem}
+.opt-pick small{display:block;color:var(--chalk-dim);font-size:.82rem;margin-top:2px}
+.badge{font-family:var(--cond);font-size:.66rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--steel-700);color:var(--legs);vertical-align:2px}
+.badge.cur{color:var(--force)}
+.star{width:48px;flex:none;border-radius:10px;border:1px solid var(--steel-700);background:var(--steel-800);color:var(--steel-600);font-size:1.2rem;cursor:pointer}
+.star.on{color:var(--legs);border-color:color-mix(in srgb,var(--legs) 50%,transparent)}
+.sheet-note{font-size:.8rem;color:var(--muted);margin:4px 0 12px}
+.menu{display:flex;flex-direction:column;gap:6px}
+.mitem{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;width:100%;background:var(--steel-800);border:1px solid var(--steel-700);border-radius:10px;padding:13px 14px;cursor:pointer;font-weight:600;font-size:.98rem}
+.mitem small{color:var(--muted);font-weight:500;font-size:.8rem}
+.mitem.danger{color:var(--danger);background:transparent}
+.mitem input[type=checkbox]{width:22px;height:22px;accent-color:var(--force)}
+.mstatus{font-size:.82rem;color:var(--chalk-dim);padding:6px 4px}
+.mstatus .btn{margin-top:6px;padding:8px 12px}
+textarea.paste{width:100%;min-height:180px;background:var(--steel-800);color:var(--chalk);border:1px solid var(--steel-600);border-radius:10px;padding:10px;font-family:ui-monospace,monospace;font-size:.8rem;margin-bottom:10px}
+
+/* Modal */
+.modal-wrap{position:fixed;inset:0;z-index:60;background:rgba(20,23,27,.9);display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--steel-900);border:1px solid var(--steel-700);border-radius:var(--radius);max-width:400px;width:100%;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.modal h3{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.4rem;margin-bottom:8px;letter-spacing:.03em}
+.modal p{color:var(--chalk-dim);font-size:.95rem;margin-bottom:18px}
+.modal .row-btns{justify-content:flex-end}
+.modal .row-btns .btn{flex:0 1 auto}
+
+/* Temporizador */
+.timer{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;align-items:center;gap:10px;justify-content:center;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--steel-800);border-top:1px solid var(--steel-600);font-family:var(--cond);overflow:hidden}
+.timer .t-label{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.timer b{font-size:1.6rem;min-width:84px;text-align:center;letter-spacing:.04em}
+.timer button{font-family:var(--cond);font-weight:700;font-size:.9rem;padding:9px 12px;border-radius:9px;border:1px solid var(--steel-600);background:var(--steel-900);cursor:pointer}
+.timer i{position:absolute;left:0;top:0;height:3px;background:var(--force);width:100%;transition:width .25s linear}
+.timer.done{background:color-mix(in srgb,var(--force) 30%,var(--steel-800))}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);z-index:70;background:var(--chalk);color:var(--steel-950);font-weight:600;font-size:.92rem;padding:10px 16px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+footer.foot{margin-top:30px;padding-top:16px;border-top:1px solid var(--steel-700);color:var(--muted);font-size:.8rem;text-align:center}
+footer.foot button{background:none;border:none;color:var(--chalk-dim);text-decoration:underline;cursor:pointer;font-size:.8rem}
+@media (max-width:360px){
+  .setrow{grid-template-columns:28px 1fr 1fr 46px;gap:5px}
+  .field input{font-size:1.08rem;padding-right:34px}
+  .plate b{font-size:.56rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Lun–Vie · Torso · Pierna · Push · Pull · Pierna</div>
+      <h1>Modo <span class="accent">Real</span> Progreso</h1>
+    </div>
+    <button class="iconbtn" data-act="menu" aria-label="Abrir menú">&#9776;<i class="dot" id="menu-dot" hidden></i></button>
+  </header>
+  <div id="banner"></div>
+  <nav class="days" id="days" role="tablist" aria-label="Días de entrenamiento"></nav>
+  <main id="main"><p class="empty">Cargando…</p></main>
+  <footer class="foot">
+    Modo Real Progreso · v2 · Los datos se guardan solo en este dispositivo. <button data-act="view-refs">Referencias</button>
+  </footer>
+</div>
+
+<div id="timer" class="timer" hidden>
+  <i id="t-bar"></i>
+  <span class="t-label">Descanso</span><b id="t-time">0:00</b>
+  <button data-act="t-add">+30 s</button>
+  <button data-act="t-close" aria-label="Cerrar temporizador">&#10005;</button>
+</div>
+<div id="sheet" class="sheet-wrap" hidden><div class="sheet" role="dialog" aria-modal="true"><div id="sheet-body"></div></div></div>
+<div id="modal" class="modal-wrap" hidden><div class="modal" role="alertdialog" aria-modal="true"><h3 id="m-title"></h3><p id="m-text"></p><div class="row-btns"><button class="btn" data-act="modal-cancel">Cancelar</button><button class="btn danger" id="m-ok" data-act="modal-ok">Confirmar</button></div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<input type="file" id="file-in" accept=".json,.txt,application/json,text/plain" multiple hidden>
+<noscript><p style="padding:20px">Esta app necesita JavaScript.</p></noscript>
+
+<script src="core.js"></script>
+<script>
+(function () {
+'use strict';
+const M = window.MRP;
+const { EXERCISES, ROUTINE, DAYS } = M;
+const LS_KEY = 'mrp_state_v2';
+const COLORS = { upper: 'var(--upper)', legs: 'var(--legs)', push: 'var(--push)', pull: 'var(--pull)' };
+const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const REC_LABEL = { first: '★ Primera vez', noweight: 'Sin peso anotado', return: '⟲ Vuelta tras pausa', increase: '↑ Subí carga', jump: '↑↑ Salto de carga', decrease: '↓ Bajá carga', repeat: '→ +1 rep' };
+
+const $ = (s, el) => (el || document).querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mmss = sec => Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+const ytUrl = ex => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(ex.name + ' técnica correcta');
+
+let state = null;
+let today = M.todayISO();
+const ui = { day: null, view: 'day', hist: {}, installEvt: null };
+
+// ================= Persistencia: IndexedDB + espejo en localStorage =================
+const Store = (() => {
+  let dbp = null, timer = null;
+  function idb() {
+    if (!('indexedDB' in window)) return Promise.reject(new Error('sin IndexedDB'));
+    if (!dbp) dbp = new Promise((res, rej) => {
+      const rq = indexedDB.open('mrp', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('kv');
+      rq.onsuccess = () => res(rq.result);
+      rq.onerror = () => rej(rq.error);
+    });
+    return dbp;
+  }
+  async function idbGet(k) {
+    const db = await idb();
+    return new Promise((res, rej) => { const rq = db.transaction('kv').objectStore('kv').get(k); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+  }
+  async function idbSet(k, v) {
+    const db = await idb();
+    return new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); });
+  }
+  const parse = json => { try { const s = JSON.parse(json); return s && s.v === 2 ? s : null; } catch (e) { return null; } };
+  async function load() {
+    let a = null, b = null;
+    try { a = parse(await idbGet('state')); } catch (e) { /* sin IndexedDB */ }
+    try { b = parse(localStorage.getItem(LS_KEY)); } catch (e) { /* sin localStorage */ }
+    if (a && b) return b.updatedAt > a.updatedAt ? b : a;
+    return a || b;
+  }
+  function write() {
+    timer = null;
+    state.updatedAt = Date.now();
+    const json = JSON.stringify(state);
+    try { localStorage.setItem(LS_KEY, json); } catch (e) { /* cuota o modo privado */ }
+    idbSet('state', json).catch(() => {});
+  }
+  function save(now) {
+    if (now) { clearTimeout(timer); write(); return; }
+    if (!timer) timer = setTimeout(write, 250);
+  }
+  function flush() { if (timer) { clearTimeout(timer); write(); } }
+  return { load, save, flush };
+})();
+
+function defaultState() {
+  return { v: 2, updatedAt: 0, sessions: [], drafts: {}, custom: {}, settings: { timer: true, primary: {}, lastBackupAt: 0, lastBackupCount: 0, tab: null } };
+}
+function normalize(s) {
+  const d = defaultState();
+  if (!s || typeof s !== 'object') return d;
+  s.v = 2;
+  s.sessions = Array.isArray(s.sessions) ? s.sessions : [];
+  s.drafts = s.drafts && typeof s.drafts === 'object' ? s.drafts : {};
+  s.custom = s.custom && typeof s.custom === 'object' ? s.custom : {};
+  s.settings = Object.assign(d.settings, s.settings || {});
+  s.settings.primary = s.settings.primary || {};
+  return s;
+}
+
+// ================= Acceso a datos =================
+const getEx = id => EXERCISES[id] || state.custom[id] || { id, name: id, tag: '', equip: 'stack', cue: '' };
+function primaryFor(slot) {
+  const p = state.settings.primary[slot.id];
+  return p && slot.options.includes(p) ? p : slot.options[0];
+}
+function getDraft(day, create) {
+  let d = state.drafts[day.id];
+  if (d && d.date !== today) d = null;
+  if (!d && create) d = state.drafts[day.id] = { date: today, startedAt: Date.now(), slots: {} };
+  return d;
+}
+function slotDraft(draft, slot) {
+  const sd = draft.slots[slot.id] || (draft.slots[slot.id] = M.newSlotDraft(slot, primaryFor(slot)));
+  if (!sd.byEx[sd.active]) sd.byEx[sd.active] = M.emptyRows(slot.sets);
+  return sd;
+}
+function findSlot(slotId) {
+  const day = DAYS[slotId.slice(0, 3)];
+  return { day, slot: day.slots.find(s => s.id === slotId) };
+}
+function equivalentsOf(exId) {
+  const set = new Set();
+  for (const d of ROUTINE) for (const s of d.slots) if (s.options.includes(exId)) s.options.forEach(id => set.add(id));
+  set.delete(exId);
+  return [...set];
+}
+const savedSession = day => state.sessions.find(s => s.id === today + '_' + day.id);
+
+// ================= Render =================
+function render() { renderTabs(); renderBanner(); renderMain(); }
+
+function renderTabs() {
+  const dow = new Date().getDay();
+  $('#days').innerHTML = ROUTINE.map(d => {
+    const sel = ui.view === 'day' && ui.day === d.id;
+    const ok = savedSession(d) ? '<i class="ok" aria-hidden="true">✓</i>' : '';
+    const td = d.dow === dow ? '<i class="today" title="Hoy"></i>' : '';
+    return `<button class="plate ${d.color}" role="tab" data-act="tab" data-day="${d.id}" aria-selected="${sel}" aria-label="${d.short}: ${esc(d.name)}">${td}${ok}<small>${d.short}</small><b>${esc(d.name)}</b></button>`;
+  }).join('');
+}
+
+function needsBackup() {
+  const s = state.settings, n = state.sessions.length;
+  return n >= 3 && n > s.lastBackupCount && Date.now() - s.lastBackupAt > 14 * 864e5;
+}
+function renderBanner() {
+  const nb = needsBackup();
+  $('#menu-dot').hidden = !nb;
+  $('#banner').innerHTML = nb
+    ? `<div class="banner"><span>Tenés ${state.sessions.length - state.settings.lastBackupCount} sesiones sin respaldo.</span><button class="btn" data-act="backup">Respaldar</button></div>`
+    : '';
+}
+
+function renderMain() {
+  let html;
+  if (ui.view === 'history') html = historyHtml();
+  else if (ui.view === 'refs') html = refsHtml();
+  else if (ui.day === 'rest' || !DAYS[ui.day]) html = restHtml();
+  else {
+    const day = DAYS[ui.day];
+    const saved = savedSession(day);
+    html = saved && !getDraft(day, false) ? savedHtml(day, saved) : dayHtml(day);
+  }
+  $('#main').innerHTML = html;
+  if (ui.view === 'day') { updateProgress(); document.querySelectorAll('#main .sets').forEach(syncWeightHints); }
+}
+
+// Las series vacías muestran (en gris) el peso que va a usar el ✓: el de la serie anterior o el sugerido
+function syncWeightHints(setsEl) {
+  let carry = '';
+  setsEl.querySelectorAll('[data-f="w"]').forEach(w => {
+    if (w.value !== '') carry = w.value;
+    else w.placeholder = carry || w.dataset.ph || '';
+  });
+}
+
+function restHtml() {
+  return `<section class="panel"><div class="rest-day"><h2>Hoy descansás</h2>
+    <p>Sábado y domingo son de recuperación: el músculo crece descansando. Dormí bien e hidratate.<br>
+    Si te perdiste un día, elegilo arriba y hacelo igual: se guarda con la fecha de hoy.</p></div></section>`;
+}
+
+function dayHtml(day) {
+  const draft = getDraft(day, true);
+  let html = `<section class="panel" data-day="${day.id}" data-color="${day.color}" style="--bc:${COLORS[day.color]}">
+  <div class="block-banner">
+    <div><h2>${esc(day.name)}</h2><div class="focus">${esc(day.focus)}</div></div>
+    <div class="goal"><b>≈${M.estMinutes(day, true)} min</b><br>${M.estMinutes(day, false)} sin el opcional</div>
+    <div class="progress-wrap"><div class="progress-label"><span>Progreso de la sesión</span><span id="prog-txt"></span></div><div class="progress"><i id="prog-bar"></i></div></div>
+    <details class="warm"><summary>Calentamiento y reglas</summary>
+      <p>5 min de movilidad o cardio suave + 2 series de aproximación en el primer ejercicio (≈50 % y ≈75 % del peso, pocas reps; no se anotan).
+      Trabajá dejando 1–2 repeticiones en reserva. Si una máquina está ocupada, tocá <b>⇄ Cambiar</b>. Marcá ✓ al terminar cada serie: si dejás un campo vacío, se completa con lo sugerido (en gris).</p>
+    </details>
+  </div>`;
+  day.slots.forEach((slot, i) => { html += slotHtml(day, slot, i, draft); });
+  html += `<button class="export-btn" data-act="finish">✓ Terminar y guardar sesión</button>
+  <div class="row-btns"><button class="btn ghost" data-act="reset-day">Reiniciar el día</button></div></section>`;
+  return html;
+}
+
+function slotHtml(day, slot, idx, draft) {
+  const sd = slotDraft(draft, slot);
+  const ex = getEx(sd.active);
+  const rows = sd.byEx[sd.active];
+  const rec = M.recommend(state.sessions, ex, slot, today);
+  const perf = M.performances(state.sessions, ex.id);
+  const histOpen = !!ui.hist[slot.id + ':' + ex.id];
+  const others = Object.keys(sd.byEx).filter(id => id !== sd.active && sd.byEx[id].some(M.rowCounts));
+  return `<article class="card${slot.optional ? ' optional' : ''}" data-slot="${slot.id}">
+    <div class="card-top"><span class="slotnum">${idx + 1}</span><span class="slotlabel">${esc(slot.label)}</span>${slot.optional ? '<span class="opt">Opcional</span>' : ''}
+      <button class="swap" data-act="swap" aria-label="Cambiar ${esc(slot.label)} por un ejercicio equivalente">⇄ Cambiar</button></div>
+    <h3>${esc(ex.name)}</h3>
+    <div class="meta"><span class="tag">${esc(ex.tag)}</span><span>${slot.sets} × ${slot.range[0]}–${slot.range[1]} · descanso ${mmss(slot.rest)}</span></div>
+    <div class="unit">Anotá: <b>${esc(M.equipOf(ex).unit)}</b></div>
+    ${recHtml(rec, ex)}
+    ${others.length ? `<div class="also">También hoy: ${others.map(id => esc(getEx(id).name) + ' (' + sd.byEx[id].filter(M.rowCounts).length + ' series)').join(', ')}</div>` : ''}
+    <div class="sets">${rows.map((row, i) => rowHtml(row, i, rec)).join('')}</div>
+    <div class="card-actions">
+      <button class="mini" data-act="addset">+ Serie</button>
+      <button class="mini" data-act="rmset"${rows.length <= 1 ? ' disabled' : ''}>− Serie</button>
+      <button class="mini" data-act="hist" aria-expanded="${histOpen}">Historial (${perf.length})</button>
+      <a class="mini link" target="_blank" rel="noopener" href="${ytUrl(ex)}">▶ Técnica</a>
+    </div>
+    ${histOpen ? perfHtml(perf) : ''}
+    ${ex.cue ? `<p class="cue">${esc(ex.cue)}</p>` : ''}
+  </article>`;
+}
+
+function recHtml(rec, ex) {
+  const last = rec.last
+    ? `Última: <b>${esc(M.formatSets(rec.last.sets))}</b> · ${M.fmtDate(rec.last.date)}${rec.days > 0 ? ' (hace ' + rec.days + ' d)' : ' (hoy)'}`
+    : 'Sin registros de este ejercicio todavía.';
+  const uniq = [...new Set(rec.reps)];
+  const reps = uniq.length === 1 ? uniq[0] : rec.reps.join('/');
+  const next = rec.kind === 'first'
+    ? `Objetivo: <b>${reps} reps</b>`
+    : `Hoy: <b>${rec.weight != null ? M.fmtW(rec.weight) + ' kg' : 'mismo peso'} × ${reps}</b>`;
+  const ref = rec.ref ? `<div class="rec-ref">Referencia (otro equipo, no se convierte): ${esc(getEx(rec.ref.exId).name)} — ${esc(M.formatSets(rec.ref.sets))} · ${M.fmtDate(rec.ref.date)}</div>` : '';
+  const hint = rec.kind === 'first' && ex.hint ? `<div class="rec-ref">${esc(ex.hint)}</div>` : '';
+  return `<div class="rec rec-${rec.kind}"><div class="rec-last">${last}</div>
+    <div class="rec-next"><span class="rk">${REC_LABEL[rec.kind]}</span> ${next}</div>
+    <div class="rec-msg">${esc(rec.msg)}</div>${ref}${hint}</div>`;
+}
+
+function rowHtml(row, i, rec) {
+  const pw = rec.weight != null ? M.fmtW(rec.weight) : '';
+  const pr = rec.reps.length ? (rec.reps[i] != null ? rec.reps[i] : rec.reps[rec.reps.length - 1]) : '';
+  return `<div class="setrow${row.done ? ' done' : ''}" data-i="${i}">
+    <b class="setnum">S${i + 1}</b>
+    <label class="field"><input data-f="w" type="text" inputmode="decimal" autocomplete="off" enterkeyhint="next" value="${esc(row.w)}" placeholder="${esc(pw)}" data-ph="${esc(pw)}" aria-label="Peso serie ${i + 1}"><em>kg</em></label>
+    <label class="field"><input data-f="r" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" value="${esc(row.r)}" placeholder="${esc(pr)}" aria-label="Repeticiones serie ${i + 1}"><em>reps</em></label>
+    <button class="setcheck" data-act="check" aria-pressed="${!!row.done}" aria-label="Marcar serie ${i + 1} como hecha">✓</button>
+  </div>`;
+}
+
+function perfHtml(perf) {
+  if (!perf.length) return '<ul class="perf"><li>Todavía no hay registros de este ejercicio.</li></ul>';
+  return '<ul class="perf">' + perf.slice(-6).reverse().map(p => `<li><span>${M.fmtDate(p.date, true)}</span><b>${esc(M.formatSets(p.sets))}</b></li>`).join('') + '</ul>';
+}
+
+function entriesHtml(s, editable) {
+  return '<ul class="entries">' + s.entries.map((en, i) => `<li><div><span class="en-name">${esc(M.exName(en.exId, state.custom))}</span><small>${esc(M.formatSets(en.sets))}</small>${en.note ? `<small class="note">${esc(en.note)}</small>` : ''}</div>${editable ? `<button class="mini" data-act="h-swap" data-sid="${esc(s.id)}" data-ei="${i}" aria-label="Corregir ejercicio">⇄</button>` : ''}</li>`).join('') + '</ul>';
+}
+
+function savedHtml(day, s) {
+  return `<section class="panel" data-day="${day.id}" data-color="${day.color}" style="--bc:${COLORS[day.color]}">
+  <div class="block-banner"><div><h2>${esc(day.name)}</h2><div class="focus">${esc(day.focus)}</div></div></div>
+  <div class="saved"><div class="saved-h">✓ Sesión guardada · ${DOW[M.dowOf(s.date)]} ${M.fmtDate(s.date, true)}</div>
+    ${entriesHtml(s, false)}
+    <div class="row-btns">
+      <button class="btn primary" data-act="txt-session" data-sid="${esc(s.id)}">⬇ Exportar TXT</button>
+      <button class="btn" data-act="share-session" data-sid="${esc(s.id)}">Compartir</button>
+    </div>
+    <div class="row-btns"><button class="btn ghost" data-act="reopen" data-sid="${esc(s.id)}">Reabrir para editar</button></div>
+  </div></section>`;
+}
+
+function historyHtml() {
+  const list = M.sortSessions(state.sessions).reverse();
+  let html = `<section class="view"><div class="view-head"><button class="btn" data-act="back">← Volver</button><h2>Historial</h2><span class="muted">${list.length} sesiones</span></div>`;
+  if (!list.length) html += '<p class="empty">Todavía no hay sesiones. Importá tus TXT o un respaldo desde el menú (☰).</p>';
+  for (const s of list) {
+    const day = s.dayId && DAYS[s.dayId];
+    html += `<article class="hcard" style="--bc:${day ? COLORS[day.color] : 'var(--steel-600)'}">
+      <header><b>${DOW[M.dowOf(s.date)]} ${M.fmtDate(s.date, true)}</b><span class="chip">${esc(s.block || (day ? day.block : ''))}</span></header>
+      ${entriesHtml(s, true)}
+      <footer><button class="mini" data-act="txt-session" data-sid="${esc(s.id)}">⬇ TXT</button><button class="mini danger" data-act="h-del" data-sid="${esc(s.id)}">Borrar</button></footer>
+    </article>`;
+  }
+  return html + '</section>';
+}
+
+function refsHtml() {
+  return `<section class="view"><div class="view-head"><button class="btn" data-act="back">← Volver</button><h2>Referencias</h2></div>
+  <p class="muted" style="margin-bottom:12px">En qué se basa la rutina y las sugerencias de la app.</p>
+  <ul class="refs">${M.REFERENCES.map(r => `<li><b>${esc(r.t)}</b><p>${esc(r.f)}</p><a href="${esc(r.u)}" target="_blank" rel="noopener">${esc(r.u)}</a></li>`).join('')}</ul></section>`;
+}
+
+function updateProgress() {
+  const bar = $('#prog-bar');
+  if (!bar) return;
+  const day = DAYS[ui.day];
+  const draft = getDraft(day, false);
+  let total = 0, done = 0;
+  for (const slot of day.slots) {
+    const sd = draft && draft.slots[slot.id];
+    const rows = sd ? sd.byEx[sd.active] : null;
+    total += rows ? rows.length : slot.sets;
+    if (rows) done += rows.filter(r => r.done).length;
+  }
+  bar.style.width = (total ? Math.round(done / total * 100) : 0) + '%';
+  $('#prog-txt').textContent = done + '/' + total + ' series';
+}
+
+function rerenderCard(slotId) {
+  const { day, slot } = findSlot(slotId);
+  const card = document.querySelector(`.card[data-slot="${slotId}"]`);
+  if (!card) return renderMain();
+  card.outerHTML = slotHtml(day, slot, day.slots.indexOf(slot), getDraft(day, true));
+  const fresh = document.querySelector(`.card[data-slot="${slotId}"] .sets`);
+  if (fresh) syncWeightHints(fresh);
+  updateProgress();
+}
+
+// ================= Contexto de una fila =================
+function rowCtx(el) {
+  const card = el.closest('.card');
+  if (!card) return null;
+  const { day, slot } = findSlot(card.dataset.slot);
+  const draft = getDraft(day, true);
+  const sd = slotDraft(draft, slot);
+  const rows = sd.byEx[sd.active];
+  const rowEl = el.closest('.setrow');
+  const i = rowEl ? Number(rowEl.dataset.i) : -1;
+  return { day, slot, draft, sd, rows, i, row: rows[i], rowEl, card };
+}
+
+// ================= UI helpers =================
+let toastT = 0;
+function toast(msg, ms) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), ms || 2600);
+}
+
+let skipPop = 0;
+function openSheet(html) {
+  $('#sheet-body').innerHTML = html;
+  const w = $('#sheet');
+  if (w.hidden) { w.hidden = false; history.pushState({ mrpSheet: true }, ''); }
+}
+function closeSheet() {
+  const w = $('#sheet');
+  if (w.hidden) return;
+  w.hidden = true;
+  if (history.state && history.state.mrpSheet) { skipPop++; history.back(); }
+}
+function setView(v) {
+  const w = $('#sheet');
+  if (!w.hidden) {
+    w.hidden = true;
+    if (history.state && history.state.mrpSheet) history.replaceState({ mrpView: true }, '');
+    else history.pushState({ mrpView: true }, '');
+  } else if (ui.view === 'day') history.pushState({ mrpView: true }, '');
+  ui.view = v;
+  render();
+  window.scrollTo(0, 0);
+}
+function goBack() {
+  if (history.state && history.state.mrpView) history.back();
+  else { ui.view = 'day'; render(); }
+}
+window.addEventListener('popstate', () => {
+  if (skipPop) { skipPop--; return; }
+  if (!$('#modal').hidden) { modalDone(false); return; }
+  if (!$('#sheet').hidden) { $('#sheet').hidden = true; return; }
+  if (ui.view !== 'day') { ui.view = 'day'; render(); }
+});
+
+let modalResolve = null;
+function ask(title, text, okLabel) {
+  $('#m-title').textContent = title;
+  $('#m-text').textContent = text;
+  $('#m-ok').textContent = okLabel || 'Confirmar';
+  $('#modal').hidden = false;
+  return new Promise(res => { modalResolve = res; });
+}
+function modalDone(v) {
+  $('#modal').hidden = true;
+  if (modalResolve) { const r = modalResolve; modalResolve = null; r(v); }
+}
+
+function download(name, text, type) {
+  const blob = new Blob([text], { type: type || 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+async function shareFile(name, text, type) {
+  try {
+    const file = new File([text], name, { type: type || 'text/plain' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+      return true;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return false;
+  }
+  download(name, text, type);
+  toast('Tu navegador no permite compartir archivos: se descargó');
+  return true;
+}
+
+// ================= Temporizador de descanso =================
+const T = { end: 0, total: 1, int: 0, hide: 0 };
+function startTimer(sec) {
+  if (!state.settings.timer) return;
+  T.end = Date.now() + sec * 1000; T.total = sec;
+  const el = $('#timer');
+  el.hidden = false; el.classList.remove('done');
+  document.documentElement.classList.add('has-timer');
+  clearInterval(T.int); clearTimeout(T.hide);
+  T.int = setInterval(tickTimer, 250);
+  tickTimer();
+}
+function tickTimer() {
+  const left = Math.max(0, Math.ceil((T.end - Date.now()) / 1000));
+  $('#t-time').textContent = mmss(left);
+  $('#t-bar').style.width = Math.min(100, 100 * left / T.total) + '%';
+  if (left === 0) {
+    clearInterval(T.int);
+    $('#timer').classList.add('done');
+    $('#t-time').textContent = '¡A la serie!';
+    if (navigator.vibrate) navigator.vibrate([250, 120, 250]);
+    T.hide = setTimeout(stopTimer, 9000);
+  }
+}
+function stopTimer() {
+  clearInterval(T.int); clearTimeout(T.hide);
+  $('#timer').hidden = true;
+  document.documentElement.classList.remove('has-timer');
+}
+// Que la barra fija del temporizador nunca tape la próxima serie
+function keepAboveTimer(el) {
+  if (!el) return;
+  const tm = $('#timer');
+  const limit = (tm.hidden ? window.innerHeight : tm.getBoundingClientRect().top) - 12;
+  const r = el.getBoundingClientRect();
+  if (r.bottom > limit) window.scrollBy(0, r.bottom - limit);
+}
+
+// ================= Acciones =================
+const A = {};
+
+A.tab = t => {
+  ui.view = 'day';
+  ui.day = t.dataset.day;
+  state.settings.tab = { date: today, day: ui.day };
+  Store.save();
+  render();
+  window.scrollTo(0, 0);
+};
+
+A.check = t => {
+  const c = rowCtx(t);
+  if (!c || !c.row) return;
+  const wIn = c.rowEl.querySelector('[data-f="w"]');
+  const rIn = c.rowEl.querySelector('[data-f="r"]');
+  if (!c.row.done) {
+    if (c.row.w === '') {
+      let w = '';
+      for (let j = c.i - 1; j >= 0; j--) if (c.rows[j].w !== '') { w = c.rows[j].w; break; }
+      if (!w) w = wIn.placeholder;
+      if (!w) {
+        const f = wIn.parentElement;
+        f.classList.remove('flash'); void f.offsetWidth; f.classList.add('flash');
+        wIn.focus();
+        toast('Anotá el peso de esta serie');
+        return;
+      }
+      c.row.w = w; wIn.value = w;
+    }
+    if (c.row.r === '' && rIn.placeholder) { c.row.r = rIn.placeholder; rIn.value = c.row.r; }
+    c.row.done = true;
+    if (!c.row.t) c.row.t = Date.now();
+    if (navigator.vibrate) navigator.vibrate(15);
+    startTimer(c.slot.rest);
+  } else {
+    c.row.done = false;
+  }
+  c.rowEl.classList.toggle('done', c.row.done);
+  t.setAttribute('aria-pressed', String(c.row.done));
+  updateProgress();
+  Store.save();
+  if (c.row.done) keepAboveTimer(c.rowEl.nextElementSibling || c.card.querySelector('.card-actions'));
+};
+
+A.addset = t => {
+  const c = rowCtx(t);
+  c.rows.push({ w: '', r: '', done: false });
+  Store.save();
+  rerenderCard(c.slot.id);
+};
+A.rmset = t => {
+  const c = rowCtx(t);
+  if (c.rows.length <= 1) return;
+  if (c.rows[c.rows.length - 1].done) { toast('La última serie está marcada: desmarcala primero'); return; }
+  c.rows.pop();
+  Store.save();
+  rerenderCard(c.slot.id);
+};
+A.hist = t => {
+  const c = rowCtx(t);
+  const k = c.slot.id + ':' + c.sd.active;
+  ui.hist[k] = !ui.hist[k];
+  rerenderCard(c.slot.id);
+};
+
+A.swap = t => openSwap(t.closest('.card').dataset.slot);
+function openSwap(slotId) {
+  const { day, slot } = findSlot(slotId);
+  const sd = slotDraft(getDraft(day, true), slot);
+  const primary = primaryFor(slot);
+  let html = `<div class="sheet-h"><h3>${esc(slot.label)}</h3><p>Equivalentes: mismo patrón de movimiento y mismos músculos. Cada uno guarda su propio historial y su sugerencia.</p></div><ul class="opts">`;
+  for (const id of slot.options) {
+    const ex = getEx(id);
+    const last = M.lastPerformance(state.sessions, id);
+    const hoy = (sd.byEx[id] || []).filter(M.rowCounts).length;
+    html += `<li class="${id === sd.active ? 'cur' : ''}">
+      <button class="opt-pick" data-act="pick" data-slot="${slot.id}" data-ex="${id}">
+        <span class="opt-name">${esc(ex.name)}${id === primary ? ' <span class="badge">Principal</span>' : ''}${id === sd.active ? ' <span class="badge cur">Actual</span>' : ''}</span>
+        <small>${esc(M.equipOf(ex).unit)} · ${last ? 'Última: ' + esc(M.formatSets(last.sets)) + ' · ' + M.fmtDate(last.date) : 'Sin registros'}${hoy ? ' · ' + hoy + ' series hoy' : ''}</small>
+      </button>
+      <button class="star${id === primary ? ' on' : ''}" data-act="star" data-slot="${slot.id}" data-ex="${id}" aria-label="Fijar ${esc(ex.name)} como principal" aria-pressed="${id === primary}">★</button></li>`;
+  }
+  html += `</ul><p class="sheet-note">★ fija el ejercicio que aparece por defecto. Usá el principal y cambiá solo cuando haga falta: rotar al azar rinde menos (Kassiano 2022). El peso no se convierte entre equipos distintos.</p>
+  <button class="btn block" data-act="close-sheet">Cerrar</button>`;
+  openSheet(html);
+}
+A.pick = t => {
+  const { day, slot } = findSlot(t.dataset.slot);
+  const sd = slotDraft(getDraft(day, true), slot);
+  sd.active = t.dataset.ex;
+  if (!sd.byEx[sd.active]) sd.byEx[sd.active] = M.emptyRows(slot.sets);
+  Store.save();
+  closeSheet();
+  rerenderCard(slot.id);
+  toast('Cambiado a ' + getEx(sd.active).name);
+};
+A.star = t => {
+  const p = state.settings.primary;
+  if (p[t.dataset.slot] === t.dataset.ex) delete p[t.dataset.slot];
+  else p[t.dataset.slot] = t.dataset.ex;
+  Store.save();
+  openSwap(t.dataset.slot);
+};
+A['close-sheet'] = () => closeSheet();
+
+A.finish = () => {
+  const day = DAYS[ui.day];
+  const draft = getDraft(day, false);
+  const s = draft && M.sessionFromDraft(day, draft, Date.now());
+  if (!s) { toast('Marcá al menos una serie ✓ para guardar'); return; }
+  state.sessions = M.upsertSession(state.sessions, s);
+  delete state.drafts[day.id];
+  Store.save(true);
+  stopTimer();
+  render();
+  window.scrollTo(0, 0);
+  toast('Sesión guardada ✓');
+};
+A.reopen = t => {
+  const s = state.sessions.find(x => x.id === t.dataset.sid);
+  if (!s) return;
+  const day = DAYS[s.dayId] || DAYS[ui.day];
+  state.drafts[day.id] = M.draftFromSession(day, s);
+  state.drafts[day.id].date = today;
+  state.sessions = state.sessions.filter(x => x.id !== s.id);
+  Store.save(true);
+  render();
+  toast('Sesión reabierta: editá y volvé a guardar');
+};
+A['reset-day'] = async () => {
+  const ok = await ask('¿Reiniciar el día?', 'Se borran las series anotadas hoy en este día. El historial no se toca.', 'Sí, reiniciar');
+  if (!ok) return;
+  delete state.drafts[ui.day];
+  Store.save(true);
+  stopTimer();
+  render();
+};
+
+const sessionById = id => state.sessions.find(s => s.id === id);
+A['txt-session'] = t => {
+  const s = sessionById(t.dataset.sid);
+  if (s) download(s.date + '_gym.txt', M.buildTxt(s, state.custom));
+};
+A['share-session'] = t => {
+  const s = sessionById(t.dataset.sid);
+  if (s) shareFile(s.date + '_gym.txt', M.buildTxt(s, state.custom), 'text/plain');
+};
+
+// ----- Menú -----
+A.menu = () => {
+  const s = state.settings;
+  const last = s.lastBackupAt ? M.fmtDate(M.todayISO(new Date(s.lastBackupAt)), true) : 'nunca';
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
+  openSheet(`<div class="sheet-h"><h3>Menú</h3></div><div class="menu">
+    <button class="mitem" data-act="view-history">Historial <small>${state.sessions.length} sesiones</small></button>
+    <button class="mitem" data-act="backup">Respaldo completo (JSON) <small>Último: ${last}</small></button>
+    <button class="mitem" data-act="export-all">Exportar todo en TXT</button>
+    <button class="mitem" data-act="import">Importar TXT o respaldo <small>archivos</small></button>
+    <button class="mitem" data-act="paste">Pegar texto <small>TXT o JSON</small></button>
+    <label class="mitem"><span>Temporizador de descanso</span><input type="checkbox" data-act="toggle-timer"${s.timer ? ' checked' : ''}></label>
+    ${ui.installEvt ? '<button class="mitem" data-act="install">Instalar app en el teléfono</button>' : ''}
+    ${ios ? '<div class="mstatus">En iPhone: tocá Compartir → “Agregar a inicio” para instalarla.</div>' : ''}
+    <button class="mitem" data-act="view-refs">Referencias científicas</button>
+    <div class="mstatus" id="storage-status">Guardado: comprobando…</div>
+    <button class="mitem danger" data-act="wipe">Borrar todo el historial</button>
+  </div>`);
+  storageStatus();
+};
+async function storageStatus() {
+  const el = $('#storage-status');
+  if (!el) return;
+  let persisted = false;
+  try { persisted = !!(navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()); } catch (e) { /* no soportado */ }
+  el.innerHTML = persisted
+    ? 'Guardado: <b>persistente ✓</b> — el navegador no lo borra solo. Igual conviene un respaldo cada tanto.'
+    : 'Guardado: normal — si el teléfono se queda sin espacio, el navegador podría borrarlo. Instalá la app y hacé respaldos.<br><button class="btn" data-act="persist">Pedir guardado persistente</button>';
+}
+A.persist = async () => {
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* no soportado */ }
+  storageStatus();
+};
+A['toggle-timer'] = t => {
+  state.settings.timer = t.checked;
+  if (!t.checked) stopTimer();
+  Store.save();
+};
+A.install = async () => {
+  const e = ui.installEvt;
+  if (!e) return;
+  ui.installEvt = null;
+  closeSheet();
+  e.prompt();
+  try { await e.userChoice; } catch (err) { /* cancelado */ }
+};
+A['view-history'] = () => setView('history');
+A['view-refs'] = () => setView('refs');
+A.back = () => goBack();
+
+A['export-all'] = () => {
+  if (!state.sessions.length) { toast('No hay sesiones para exportar'); return; }
+  download('historial_gym_' + today + '.txt', M.buildAllTxt(state.sessions, state.custom));
+};
+A.backup = () => {
+  openSheet(`<div class="sheet-h"><h3>Respaldo completo</h3><p>Un archivo con todo tu historial (${state.sessions.length} sesiones). Guardalo en Drive, OneDrive o mandátelo por mail: con “Importar” lo recuperás en cualquier teléfono.</p></div>
+  <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="backup-share">Compartir (Drive, Gmail…)</button><button class="btn" data-act="backup-dl">Descargar archivo</button></div>
+  <div class="row-btns"><button class="btn ghost block" data-act="close-sheet">Cerrar</button></div>`);
+};
+function markBackup() {
+  state.settings.lastBackupAt = Date.now();
+  state.settings.lastBackupCount = state.sessions.length;
+  Store.save(true);
+  renderBanner();
+}
+A['backup-dl'] = () => {
+  download('respaldo_gym_' + today + '.json', M.buildBackup(state), 'application/json');
+  markBackup(); closeSheet(); toast('Respaldo descargado');
+};
+A['backup-share'] = async () => {
+  const ok = await shareFile('respaldo_gym_' + today + '.json', M.buildBackup(state), 'application/json');
+  if (ok) { markBackup(); closeSheet(); }
+};
+
+A.import = () => { closeSheet(); $('#file-in').click(); };
+$('#file-in').addEventListener('change', async e => {
+  const files = Array.from(e.target.files || []);
+  e.target.value = '';
+  if (!files.length) return;
+  const texts = [];
+  for (const f of files) { try { texts.push(await f.text()); } catch (err) { /* ilegible */ } }
+  importTexts(texts);
+});
+A.paste = () => {
+  openSheet(`<div class="sheet-h"><h3>Pegar texto</h3><p>Pegá el contenido de uno o varios TXT exportados, o de un respaldo JSON.</p></div>
+  <textarea class="paste" id="paste-box" placeholder="FECHA: 2026-10-01&#10;BLOQUE: PUSH&#10;…"></textarea>
+  <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="paste-go">Importar</button><button class="btn ghost" data-act="close-sheet">Cancelar</button></div>`);
+};
+A['paste-go'] = () => {
+  const v = ($('#paste-box') || {}).value || '';
+  if (!v.trim()) { toast('No hay texto para importar'); return; }
+  closeSheet();
+  importTexts([v]);
+};
+function importTexts(texts) {
+  let added = 0, replaced = 0, skipped = 0, bad = 0, fromBackup = false, txtAdded = 0;
+  for (const text of texts) {
+    const tr = String(text).trim();
+    if (tr.startsWith('{')) {
+      const b = M.parseBackup(tr);
+      if (!b) { bad++; continue; }
+      fromBackup = true;
+      const r = M.mergeSessions(state.sessions, b.sessions, 'replace');
+      state.sessions = r.sessions; added += r.added; replaced += r.replaced;
+      Object.assign(state.custom, b.custom);
+      Object.assign(state.settings.primary, b.primary);
+    } else {
+      const { sessions, custom } = M.parseTxt(tr);
+      if (!sessions.length) { bad++; continue; }
+      const r = M.mergeSessions(state.sessions, sessions, 'skip');
+      state.sessions = r.sessions; added += r.added; skipped += r.skipped; txtAdded += r.added;
+      for (const k of Object.keys(custom)) if (!state.custom[k]) state.custom[k] = custom[k];
+    }
+  }
+  if (fromBackup) {
+    // Lo que vino de un respaldo ya está respaldado: no pedir respaldo de eso
+    state.settings.lastBackupAt = Date.now();
+    state.settings.lastBackupCount = state.sessions.length - txtAdded;
+  }
+  Store.save(true);
+  render();
+  const parts = [];
+  if (added) parts.push(added + ' nuevas');
+  if (replaced) parts.push(replaced + ' actualizadas');
+  if (skipped) parts.push(skipped + ' ya existían');
+  if (bad) parts.push(bad + ' archivo(s) no reconocido(s)');
+  toast('Importación: ' + (parts.join(' · ') || 'nada para importar'), 4000);
+}
+
+A.wipe = async () => {
+  if (!await ask('¿Borrar todo el historial?', 'Se eliminan TODAS las sesiones guardadas en este teléfono. Hacé un respaldo antes si querés conservarlas.', 'Continuar')) return;
+  if (!await ask('Última confirmación', 'Esto no se puede deshacer. ¿Borrar definitivamente ' + state.sessions.length + ' sesiones?', 'Borrar todo')) return;
+  state.sessions = []; state.drafts = {};
+  Store.save(true);
+  closeSheet();
+  render();
+  toast('Historial borrado');
+};
+
+// ----- Historial: corregir ejercicio o borrar -----
+A['h-swap'] = t => {
+  const s = sessionById(t.dataset.sid);
+  const ei = Number(t.dataset.ei);
+  const en = s && s.entries[ei];
+  if (!en) return;
+  let ids = equivalentsOf(en.exId);
+  if (!ids.length) ids = M.EXERCISE_LIST.map(e => e.id).filter(id => id !== en.exId);
+  openSheet(`<div class="sheet-h"><h3>Corregir ejercicio</h3><p>Registrado como <b>${esc(M.exName(en.exId, state.custom))}</b> (${esc(M.formatSets(en.sets))}). Elegí el que realmente hiciste: los pesos y reps no cambian.</p></div>
+  <ul class="opts">${ids.map(id => `<li><button class="opt-pick" data-act="h-pick" data-sid="${esc(s.id)}" data-ei="${ei}" data-ex="${id}"><span class="opt-name">${esc(getEx(id).name)}</span><small>${esc(M.equipOf(getEx(id)).unit)}</small></button></li>`).join('')}</ul>
+  <button class="btn block" data-act="close-sheet">Cancelar</button>`);
+};
+A['h-pick'] = t => {
+  const s = sessionById(t.dataset.sid);
+  const en = s && s.entries[Number(t.dataset.ei)];
+  if (!en) return;
+  const before = M.exName(en.exId, state.custom);
+  en.exId = t.dataset.ex;
+  en.slotId = undefined;
+  en.note = 'Corregido: se había registrado como ' + before;
+  Store.save(true);
+  closeSheet();
+  render();
+  toast('Ejercicio corregido');
+};
+A['h-del'] = async t => {
+  const s = sessionById(t.dataset.sid);
+  if (!s) return;
+  if (!await ask('¿Borrar esta sesión?', s.block + ' del ' + M.fmtDate(s.date, true) + '. No se puede deshacer.', 'Borrar')) return;
+  state.sessions = state.sessions.filter(x => x.id !== s.id);
+  Store.save(true);
+  render();
+};
+
+// ----- Temporizador y modal -----
+A['t-add'] = () => {
+  const wasDone = $('#timer').classList.contains('done');
+  T.end = Math.max(T.end, Date.now()) + 30000;
+  T.total += 30;
+  if (wasDone) { $('#timer').classList.remove('done'); clearTimeout(T.hide); clearInterval(T.int); T.int = setInterval(tickTimer, 250); }
+  tickTimer();
+};
+A['t-close'] = () => stopTimer();
+A['modal-ok'] = () => modalDone(true);
+A['modal-cancel'] = () => modalDone(false);
+
+// ================= Eventos =================
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t) {
+    if (e.target === $('#sheet')) closeSheet();
+    return;
+  }
+  if (t.tagName === 'LABEL') return;
+  const fn = A[t.dataset.act];
+  if (fn) fn(t, e);
+});
+document.addEventListener('input', e => {
+  const inp = e.target;
+  if (!inp.matches || !inp.matches('.setrow input[data-f]')) return;
+  const f = inp.dataset.f;
+  const clean = f === 'w' ? inp.value.replace(/[^0-9.,]/g, '') : inp.value.replace(/\D/g, '');
+  if (clean !== inp.value) inp.value = clean;
+  const c = rowCtx(inp);
+  if (!c || !c.row) return;
+  c.row[f] = clean;
+  if (f === 'w') syncWeightHints(inp.closest('.sets'));
+  Store.save();
+});
+document.addEventListener('focusin', e => {
+  const inp = e.target;
+  if (inp.matches && inp.matches('.setrow input[data-f]')) setTimeout(() => {
+    try { inp.select(); } catch (err) { /* sin selección */ }
+    keepAboveTimer(inp.closest('.setrow'));
+  }, 0);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (!$('#modal').hidden) modalDone(false); else closeSheet(); return; }
+  const inp = e.target;
+  if (e.key !== 'Enter' || !inp.matches || !inp.matches('.setrow input[data-f]')) return;
+  e.preventDefault();
+  if (inp.dataset.f === 'w') inp.closest('.setrow').querySelector('[data-f="r"]').focus();
+  else inp.blur();
+});
+
+let persistAsked = false;
+document.addEventListener('pointerdown', () => {
+  if (persistAsked) return;
+  persistAsked = true;
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persisted().then(p => { if (!p) navigator.storage.persist(); }).catch(() => {});
+    }
+  } catch (e) { /* no soportado */ }
+}, { passive: true });
+
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ui.installEvt = e; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) Store.flush(); else checkDate(); });
+window.addEventListener('pagehide', () => Store.flush());
+
+function defaultDay() {
+  const t = state.settings.tab;
+  if (t && t.date === today && (t.day === 'rest' || DAYS[t.day])) return t.day;
+  const d = ROUTINE.find(x => x.dow === new Date().getDay());
+  return d ? d.id : 'rest';
+}
+function checkDate() {
+  const t = M.todayISO();
+  if (t === today) return;
+  today = t;
+  const c = M.commitStaleDrafts(state, today);
+  ui.day = defaultDay();
+  ui.view = 'day';
+  Store.save(true);
+  render();
+  if (c.length) toast('Guardé ' + c.length + ' sesión(es) que habían quedado sin cerrar');
+}
+
+async function boot() {
+  state = normalize(await Store.load());
+  const c = M.commitStaleDrafts(state, today);
+  ui.day = defaultDay();
+  render();
+  if (c.length) { Store.save(true); toast('Guardé ' + c.length + ' sesión(es) que habían quedado sin cerrar', 4000); }
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+boot();
+})();
+</script>
+</body>
+</html>
