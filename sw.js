@@ -1,7 +1,7 @@
 /* Service worker: la app abre al instante y funciona sin conexión.
    Estrategia stale-while-revalidate: responde desde caché y actualiza en segundo plano.
    Al publicar una versión nueva, subir CACHE para limpiar la anterior. */
-const CACHE = 'mrp-v2-2';
+const CACHE = 'mrp-v2-3';
 const CORE = [
   './', './index.html', './core.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
