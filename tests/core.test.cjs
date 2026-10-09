@@ -250,3 +250,122 @@ test('fechas', () => {
   assert.equal(M.parseNum('?'), null);
   assert.equal(M.parseNum('-3'), null);
 });
+
+// ---------- Semana flexible ----------
+// Semana de referencia: lunes 2026-10-05 … domingo 2026-10-11
+const DS = (date, dayId) => ({ id: date + '_' + dayId, date, dayId, entries: [] });
+
+test('addDays y weekStart: cruce de mes y de año; domingo → lunes anterior', () => {
+  assert.equal(M.addDays('2026-10-31', 1), '2026-11-01');
+  assert.equal(M.addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(M.addDays('2026-03-01', -1), '2026-02-28');
+  assert.equal(M.dowOf('2026-10-05'), 1, '2026-10-05 es lunes');
+  assert.equal(M.weekStart('2026-10-11'), '2026-10-05', 'domingo → lunes anterior');
+  assert.equal(M.weekStart('2026-10-05'), '2026-10-05');
+  assert.equal(M.weekStart('2026-01-01'), '2025-12-29', 'cruce de año');
+});
+
+test('semana normal sin sesiones: lun..vie planificados, sáb y dom libres, next = lun', () => {
+  const p = M.weekPlan([], '2026-10-05');
+  assert.equal(p.start, '2026-10-05');
+  assert.equal(p.end, '2026-10-11');
+  assert.deepEqual(p.plan, { lun: '2026-10-05', mar: '2026-10-06', mie: '2026-10-07', jue: '2026-10-08', vie: '2026-10-09' });
+  assert.deepEqual(p.dropped, []);
+  assert.equal(p.next, 'lun');
+  assert.equal(p.nextDate, '2026-10-05');
+  assert.deepEqual(p.days.map(d => d.status), ['planned', 'planned', 'planned', 'planned', 'planned', 'free', 'free']);
+});
+
+test('falta el martes: con torso hecho el lunes y hoy miércoles, la cola corre un día', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun')], '2026-10-07');
+  assert.deepEqual(p.plan, { mar: '2026-10-07', mie: '2026-10-08', jue: '2026-10-09', vie: '2026-10-10' });
+  assert.equal(p.next, 'mar');
+  assert.equal(p.nextDate, '2026-10-07');
+  assert.equal(M.moved('mar', p), true);
+  assert.equal(p.days[6].status, 'free', 'domingo libre');
+});
+
+test('falta el martes + feriado el jueves: la proyección salta el día marcado', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun')], '2026-10-07', ['2026-10-08']);
+  assert.deepEqual(p.plan, { mar: '2026-10-07', mie: '2026-10-09', jue: '2026-10-10', vie: '2026-10-11' });
+  assert.equal(p.days[3].status, 'off');
+});
+
+test('desborde: torso el lunes y hoy viernes → vie no entra', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun')], '2026-10-09');
+  assert.deepEqual(p.dropped, ['vie']);
+  assert.deepEqual(p.plan, { mar: '2026-10-09', mie: '2026-10-10', jue: '2026-10-11' });
+  assert.equal(p.next, 'mar');
+});
+
+test('ya entrenó hoy → la próxima arranca mañana', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun'), DS('2026-10-07', 'mar')], '2026-10-07');
+  assert.equal(p.trainedToday, true);
+  assert.equal(p.next, 'mie');
+  assert.equal(p.nextDate, '2026-10-08');
+  assert.equal(p.days[2].status, 'done');
+});
+
+test('orden estricto: si hizo Pull el lunes, pendientes = lun, mar, mie, vie en ese orden', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'jue')], '2026-10-05');
+  assert.deepEqual(p.pending, ['lun', 'mar', 'mie', 'vie']);
+  assert.deepEqual(p.plan, { lun: '2026-10-06', mar: '2026-10-07', mie: '2026-10-08', vie: '2026-10-09' });
+  assert.equal(M.moved('jue', p), true, 'Pull hecho un lunes (dow 1) ≠ jueves (dow 4)');
+});
+
+test('sesiones de la semana anterior o sin dayId válido no cuentan', () => {
+  const p = M.weekPlan([DS('2026-09-28', 'lun'), { id: 'x', date: '2026-10-06', dayId: null, entries: [] }, DS('2026-10-06', 'zzz')], '2026-10-07');
+  assert.deepEqual(p.done, {});
+  assert.deepEqual(p.plan, { lun: '2026-10-07', mar: '2026-10-08', mie: '2026-10-09', jue: '2026-10-10', vie: '2026-10-11' });
+});
+
+test('hoy marcado como no disponible → arranca mañana', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun')], '2026-10-07', ['2026-10-07']);
+  assert.equal(p.days[2].status, 'off');
+  assert.equal(p.nextDate, '2026-10-08');
+  assert.equal(p.next, 'mar');
+});
+
+test('fechas pasadas sin sesión quedan como missed; off pasado no cuenta', () => {
+  const p = M.weekPlan([], '2026-10-07', ['2026-10-05']);
+  assert.equal(p.days[0].status, 'missed');
+  assert.equal(p.days[1].status, 'missed');
+});
+
+test('pasado sin sesión después de semana completa → free (sábado de respaldo)', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun'), DS('2026-10-06', 'mar'), DS('2026-10-07', 'mie'), DS('2026-10-08', 'jue'), DS('2026-10-09', 'vie')], '2026-10-11');
+  assert.equal(p.days[5].date, '2026-10-10');
+  assert.equal(p.days[5].status, 'free');
+});
+
+test('pasado sin sesión con semana incompleta → missed', () => {
+  const p = M.weekPlan([DS('2026-10-05', 'lun')], '2026-10-07');
+  assert.equal(p.days[1].date, '2026-10-06');
+  assert.equal(p.days[1].status, 'missed');
+});
+
+test('catálogo: cada posición tiene 6 o más opciones y ningún exId se repite en el mismo día', () => {
+  for (const day of M.ROUTINE) {
+    const seen = new Set();
+    for (const s of day.slots) {
+      assert.ok(s.options.length >= 6, s.id + ' tiene ' + s.options.length);
+      for (const id of s.options) {
+        assert.ok(!seen.has(id), day.id + ': ' + id + ' repetido');
+        seen.add(id);
+      }
+    }
+  }
+});
+
+test('catálogo: los 56 ids originales siguen existiendo', () => {
+  const original = ['smith_bench', 'db_bench', 'db_incline', 'machine_chest', 'lat_pulldown', 'lat_pulldown_neutral', 'assisted_pullup', 'lat_pulldown_single', 'db_pullover', 'db_row', 'cable_row', 'machine_row', 'db_chest_row', 'db_lateral', 'cable_lateral', 'machine_lateral', 'leg_press', 'smith_squat', 'hack_squat', 'goblet_squat', 'db_rdl', 'smith_rdl', 'bb_rdl', 'leg_ext', 'leg_ext_single', 'bulgarian', 'smith_calf', 'press_calf', 'seated_calf', 'smith_incline', 'machine_incline', 'db_ohp', 'smith_ohp', 'machine_ohp', 'cable_oh_ext', 'db_french', 'db_oh_ext', 'cable_pushdown', 'cable_fly', 'pec_deck', 'db_fly', 'db_curl', 'incline_curl', 'cable_curl', 'ez_curl', 'face_pull', 'reverse_pec_deck', 'db_rear_fly', 'smith_hip_thrust', 'bb_hip_thrust', 'machine_hip_thrust', 'seated_leg_curl', 'lying_leg_curl', 'standing_leg_curl', 'walking_lunge', 'single_leg_press'];
+  assert.equal(original.length, 56);
+  for (const id of original) assert.ok(M.EXERCISES[id], 'sigue existiendo: ' + id);
+});
+
+test('catálogo: options[0] de cada posición no cambió (snapshot)', () => {
+  const first = { lun1: 'smith_bench', lun2: 'lat_pulldown', lun3: 'db_row', lun4: 'db_lateral', mar1: 'leg_press', mar2: 'db_rdl', mar3: 'leg_ext', mar4: 'smith_calf', mie1: 'db_incline', mie2: 'db_ohp', mie3: 'cable_oh_ext', mie4: 'cable_fly', jue1: 'lat_pulldown', jue2: 'db_row', jue3: 'db_curl', jue4: 'face_pull', vie1: 'smith_hip_thrust', vie2: 'seated_leg_curl', vie3: 'bulgarian', vie4: 'db_lateral' };
+  const got = {};
+  for (const day of M.ROUTINE) for (const s of day.slots) got[s.id] = s.options[0];
+  assert.deepEqual(got, first);
+});
