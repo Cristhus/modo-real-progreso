@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#14171B">
-<meta name="description" content="Registro de entrenamiento lunes a viernes con ejercicios equivalentes intercambiables y progresión sugerida.">
+<meta name="description" content="Registro de entrenamiento: 5 sesiones en 7 días, con ejercicios equivalentes intercambiables y progresión sugerida.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -181,6 +181,26 @@ details.warm p{margin-top:6px}
 .refs p{color:var(--chalk-dim)}
 .refs a{color:var(--pull);font-size:.85rem;word-break:break-all}
 .rest-day{text-align:center;padding:50px 18px;border:1px dashed var(--steel-600);border-radius:var(--radius);color:var(--chalk-dim);margin-top:22px}
+.rest-day .btn{margin-top:12px}
+.rest-day .notice{margin-top:12px;font-size:.92rem}
+
+/* ===== SEMANA FLEXIBLE ===== */
+.plate.moved{border-style:dashed}
+.plate.dropped{opacity:.45}
+.week{margin-top:12px}
+.wgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wcell{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0;padding:5px 1px;border-radius:9px;border:1px solid var(--steel-700);background:var(--steel-900);color:var(--muted);text-align:center;line-height:1.15;font-size:.6rem}
+button.wcell{cursor:pointer}
+.wcell .wd{font-family:var(--cond);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:.6rem}
+.wcell b{font-family:var(--cond);font-weight:700;font-size:.95rem;color:var(--chalk)}
+.wcell small{font-size:.6rem;max-width:100%;overflow-wrap:anywhere}
+.wcell.today{box-shadow:inset 0 0 0 1px var(--chalk-dim)}
+.wcell.done{border-color:var(--force);color:var(--force)}
+.wcell.shift{border-color:var(--legs);color:var(--legs)}
+.wcell.planned{color:var(--chalk-dim)}
+.wcell.off{border-style:dashed;background:transparent}
+.wsum{font-family:var(--cond);font-size:.92rem;color:var(--chalk-dim);margin-top:8px}
+.whint{font-size:.78rem;color:var(--muted);margin-top:2px}
 .rest-day h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:1.9rem;color:var(--chalk);margin-bottom:8px}
 
 /* Hoja inferior (sheet) */
@@ -242,12 +262,13 @@ footer.foot button{background:none;border:none;color:var(--chalk-dim);text-decor
 <div class="wrap">
   <header class="top">
     <div>
-      <div class="eyebrow">Lun–Vie · Torso · Pierna · Push · Pull · Pierna</div>
+      <div class="eyebrow">5 sesiones en 7 días · Torso · Pierna · Push · Pull · Pierna</div>
       <h1>Modo <span class="accent">Real</span> Progreso</h1>
     </div>
     <button class="iconbtn" data-act="menu" aria-label="Abrir menú">&#9776;<i class="dot" id="menu-dot" hidden></i></button>
   </header>
   <div id="banner"></div>
+  <div id="week"></div>
   <nav class="days" id="days" role="tablist" aria-label="Días de entrenamiento"></nav>
   <main id="main"><p class="empty">Cargando…</p></main>
   <footer class="foot">
@@ -276,6 +297,7 @@ const { EXERCISES, ROUTINE, DAYS } = M;
 const LS_KEY = 'mrp_state_v2';
 const COLORS = { upper: 'var(--upper)', legs: 'var(--legs)', push: 'var(--push)', pull: 'var(--pull)' };
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DOW_LONG = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 const REC_LABEL = { first: '★ Primera vez', noweight: 'Sin peso anotado', return: '⟲ Vuelta tras pausa', increase: '↑ Sube carga', jump: '↑↑ Salto de carga', decrease: '↓ Baja carga', repeat: '→ +1 rep' };
 
 const $ = (s, el) => (el || document).querySelector(s);
@@ -332,7 +354,7 @@ const Store = (() => {
 })();
 
 function defaultState() {
-  return { v: 2, updatedAt: 0, sessions: [], drafts: {}, custom: {}, settings: { timer: true, primary: {}, lastBackupAt: 0, lastBackupCount: 0, tab: null } };
+  return { v: 2, updatedAt: 0, sessions: [], drafts: {}, custom: {}, settings: { timer: true, primary: {}, lastBackupAt: 0, lastBackupCount: 0, tab: null, off: [] } };
 }
 function normalize(s) {
   const d = defaultState();
@@ -343,6 +365,10 @@ function normalize(s) {
   s.custom = s.custom && typeof s.custom === 'object' ? s.custom : {};
   s.settings = Object.assign(d.settings, s.settings || {});
   s.settings.primary = s.settings.primary || {};
+  // Días no disponibles: solo fechas ISO válidas desde el lunes de esta semana
+  const minDate = M.weekStart(today);
+  const off = Array.isArray(s.settings.off) ? s.settings.off : [];
+  s.settings.off = [...new Set(off.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && x >= minDate))];
   return s;
 }
 
@@ -374,18 +400,62 @@ function equivalentsOf(exId) {
   return [...set];
 }
 const savedSession = day => state.sessions.find(s => s.id === today + '_' + day.id);
+// Plan de la semana (cola de sesiones). Se calcula una vez por render() y se pasa a los helpers.
+const plan = () => M.weekPlan(state.sessions, today, state.settings.off);
 
 // ================= Render =================
-function render() { renderTabs(); renderBanner(); renderMain(); }
+function render() { const p = plan(); renderTabs(p); renderBanner(); renderWeek(p); renderMain(p); }
 
-function renderTabs() {
-  const dow = new Date().getDay();
+function renderTabs(p) {
+  p = p || plan();
   $('#days').innerHTML = ROUTINE.map(d => {
     const sel = ui.view === 'day' && ui.day === d.id;
-    const ok = savedSession(d) ? '<i class="ok" aria-hidden="true">✓</i>' : '';
-    const td = d.dow === dow ? '<i class="today" title="Hoy"></i>' : '';
-    return `<button class="plate ${d.color}" role="tab" data-act="tab" data-day="${d.id}" aria-selected="${sel}" aria-label="${d.short}: ${esc(d.name)}">${td}${ok}<small>${d.short}</small><b>${esc(d.name)}</b></button>`;
+    const doneDate = p.done[d.id];
+    const ok = doneDate ? '<i class="ok" aria-hidden="true">✓</i>' : '';
+    const td = p.nextDate === today && p.next === d.id ? '<i class="today" title="Hoy"></i>' : '';
+    const mv = M.moved(d.id, p);
+    const dropped = p.dropped.includes(d.id);
+    const date = doneDate || p.plan[d.id] || null;
+    const shown = date ? DOW[M.dowOf(date)] : '—';
+    const st = doneDate ? 'hecha el ' + shown : date ? 'programada el ' + shown : 'no entra esta semana';
+    const cls = ['plate', d.color, mv ? 'moved' : '', dropped ? 'dropped' : ''].filter(Boolean).join(' ');
+    return `<button class="${cls}" role="tab" data-act="tab" data-day="${d.id}" aria-selected="${sel}" aria-label="${esc(d.short + ': ' + d.name + ' — ' + st)}">${td}${ok}<small>${shown}</small><b>${esc(d.name)}</b></button>`;
   }).join('');
+}
+
+// Franja de 7 días (Lun..Dom) con la sesión que cae en cada fecha
+function renderWeek(p) {
+  p = p || plan();
+  const cells = p.days.map(day => {
+    const isToday = day.date === today;
+    const names = day.dayIds.map(id => DAYS[id].name);
+    const shift = day.dayIds.some(id => M.moved(id, p));
+    let cls, label;
+    if (day.status === 'done') { cls = 'done'; label = names.join(' · '); }
+    else if (day.status === 'planned') { cls = shift ? 'shift' : 'planned'; label = names.join(' · '); }
+    else if (day.status === 'off') { cls = 'off'; label = 'No voy'; }
+    else if (day.status === 'missed') { cls = 'missed'; label = 'Faltó'; }
+    else { cls = 'free'; label = 'Libre'; }
+    const inner = `<span class="wd">${DOW[day.dow]}</span><b>${Number(day.date.slice(8))}</b><small>${esc(label)}</small>`;
+    const cellCls = `wcell ${cls}${isToday ? ' today' : ''}`;
+    if (day.date >= today && day.status !== 'done') {
+      const off = day.status === 'off';
+      return `<button class="${cellCls}" data-act="toggle-off" data-date="${day.date}" aria-pressed="${off}" aria-label="${DOW_LONG[day.dow]} ${Number(day.date.slice(8))}: ${esc(label)}. Toca para ${off ? 'volver a incluirlo' : 'marcarlo como no disponible'}">${inner}</button>`;
+    }
+    return `<div class="${cellCls}" aria-label="${DOW_LONG[day.dow]} ${Number(day.date.slice(8))}: ${esc(label)}">${inner}</div>`;
+  }).join('');
+  const hoy = p.nextDate === today && p.next
+    ? ` · Hoy toca ${esc(DAYS[p.next].name)}${M.moved(p.next, p) ? ' (movida del ' + DOW_LONG[DAYS[p.next].dow] + ')' : ''}`
+    : p.trainedToday ? ' · Hoy ya entrenaste' : '';
+  const doneN = Object.keys(p.done).length;
+  const nSes = p.pending.length, nDias = Object.keys(p.plan).length;
+  const dropped = p.dropped.length
+    ? `<div class="wsum">Quedan ${nSes} ${nSes === 1 ? 'sesión' : 'sesiones'} y ${nDias} ${nDias === 1 ? 'día' : 'días'}: ${p.dropped.map(id => esc(DAYS[id].name)).join(', ')} ${p.dropped.length === 1 ? 'no entra' : 'no entran'} esta semana. El lunes se arranca de nuevo con Torso.</div>`
+    : '';
+  const hint = doneN === ROUTINE.length ? '' : '<p class="whint">Toca un día para marcarlo como no disponible (feriado, viaje).</p>';
+  $('#week').innerHTML = `<div class="week"><div class="wgrid">${cells}</div>
+    <p class="wsum">Semana: ${doneN}/${ROUTINE.length} hechas${hoy}</p>${dropped}
+    ${hint}</div>`;
 }
 
 function needsBackup() {
@@ -400,15 +470,16 @@ function renderBanner() {
     : '';
 }
 
-function renderMain() {
+function renderMain(p) {
+  p = p || plan();
   let html;
   if (ui.view === 'history') html = historyHtml();
   else if (ui.view === 'refs') html = refsHtml();
-  else if (ui.day === 'rest' || !DAYS[ui.day]) html = restHtml();
+  else if (ui.day === 'rest' || !DAYS[ui.day]) html = restHtml(p);
   else {
     const day = DAYS[ui.day];
     const saved = savedSession(day);
-    html = saved && !getDraft(day, false) ? savedHtml(day, saved) : dayHtml(day);
+    html = saved && !getDraft(day, false) ? savedHtml(day, saved) : dayHtml(day, p);
   }
   $('#main').innerHTML = html;
   if (ui.view === 'day') { updateProgress(); document.querySelectorAll('#main .sets').forEach(syncWeightHints); }
@@ -423,15 +494,39 @@ function syncWeightHints(setsEl) {
   });
 }
 
-function restHtml() {
-  return `<section class="panel"><div class="rest-day"><h2>Hoy descansas</h2>
-    <p>Sábado y domingo son de recuperación: el músculo crece descansando. Duerme bien e hidrátate.<br>
-    Si te perdiste un día, elígelo arriba y hazlo igual: se guarda con la fecha de hoy.</p></div></section>`;
+function restHtml(p) {
+  const doneN = Object.keys(p.done).length;
+  const nextTxt = p.next && p.nextDate
+    ? `Próxima: <b>${esc(DAYS[p.next].name)}</b> el <b>${DOW_LONG[M.dowOf(p.nextDate)]}</b>.`
+    : '';
+  const offToday = state.settings.off.includes(today);
+  let head = 'Hoy descansas', msg = '';
+  if (doneN === ROUTINE.length) {
+    head = 'Semana completa ✓';
+    msg = '<p>Las 5 sesiones de esta semana están hechas. Descansa.</p>';
+  } else if (p.trainedToday) {
+    msg = `<p>Hoy ya entrenaste. ${nextTxt}</p>`;
+  } else if (offToday) {
+    msg = `<p>Marcaste hoy como no disponible. ${nextTxt}</p>
+      <button class="btn" data-act="toggle-off" data-date="${today}">Desmarcar hoy</button>`;
+  } else if (p.dropped.length) {
+    msg = `<p class="notice">Ya no quedan días esta semana para ${p.dropped.map(id => esc(DAYS[id].name)).join(', ')}. El lunes se arranca de nuevo con Torso.</p>`;
+  } else if (nextTxt) {
+    msg = `<p>${nextTxt}</p>`;
+  }
+  return `<section class="panel"><div class="rest-day"><h2>${head}</h2>
+    ${msg || '<p>El músculo crece descansando. Duerme bien e hidrátate.</p>'}
+    <p>Si quieres, elige una sesión arriba y hazla igual: se guarda con la fecha de hoy.</p></div></section>`;
 }
 
-function dayHtml(day) {
+function dayHtml(day, p) {
   const draft = getDraft(day, true);
+  const doneOn = p && p.done[day.id];
+  const note = doneOn && doneOn !== today
+    ? `<p class="muted" style="margin:0 0 12px">Ya hiciste esta sesión el ${M.fmtDate(doneOn, true)}. Si la repites, se guarda como otra sesión con la fecha de hoy.</p>`
+    : '';
   let html = `<section class="panel" data-day="${day.id}" data-color="${day.color}" style="--bc:${COLORS[day.color]}">
+  ${note}
   <div class="block-banner">
     <div><h2>${esc(day.name)}</h2><div class="focus">${esc(day.focus)}</div></div>
     <div class="goal"><b>≈${M.estMinutes(day, true)} min</b><br>${M.estMinutes(day, false)} sin el opcional</div>
@@ -715,6 +810,22 @@ A.tab = t => {
   Store.save();
   render();
   window.scrollTo(0, 0);
+};
+
+// Marca/desmarca una fecha como no disponible (feriado, viaje): la cola de sesiones la saltea
+A['toggle-off'] = t => {
+  const d = t.dataset.date;
+  const off = state.settings.off;
+  const i = off.indexOf(d);
+  if (i >= 0) off.splice(i, 1); else off.push(d);
+  // Si se tocó hoy, la vista del día se ajusta al nuevo estado (y se guarda para recargas)
+  if (d === today && ui.view === 'day') {
+    if (state.settings.off.includes(today)) ui.day = 'rest';
+    else { const p = plan(); ui.day = p.next && p.nextDate === today ? p.next : 'rest'; }
+    state.settings.tab = { date: today, day: ui.day };
+  }
+  Store.save(true);
+  render();
 };
 
 A.check = t => {
@@ -1097,8 +1208,9 @@ window.addEventListener('pagehide', () => Store.flush());
 function defaultDay() {
   const t = state.settings.tab;
   if (t && t.date === today && (t.day === 'rest' || DAYS[t.day])) return t.day;
-  const d = ROUTINE.find(x => x.dow === new Date().getDay());
-  return d ? d.id : 'rest';
+  const p = plan();
+  if (p.next && p.nextDate === today) return p.next;
+  return 'rest';
 }
 function checkDate() {
   const t = M.todayISO();

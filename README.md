@@ -1,6 +1,6 @@
 # Modo Real Progreso
 
-Registro de entrenamiento para el celular (PWA): rutina lunes a viernes de 4 ejercicios por día, con **ejercicios equivalentes intercambiables** (por si la máquina está ocupada) y **sugerencia de peso y repeticiones** basada en la última vez que hiciste cada ejercicio.
+Registro de entrenamiento para el celular (PWA): 5 sesiones en 7 días, de 4 ejercicios cada una, con **ejercicios equivalentes intercambiables** (por si la máquina está ocupada) y **sugerencia de peso y repeticiones** basada en la última vez que hiciste cada ejercicio.
 
 - Funciona sin conexión y se instala como app.
 - Los datos quedan **solo en el dispositivo** (IndexedDB + localStorage). Para no perderlos: Menú → Respaldo (JSON).
@@ -8,7 +8,7 @@ Registro de entrenamiento para el celular (PWA): rutina lunes a viernes de 4 eje
 
 ## Rutina
 
-| Día | Bloque | Posiciones (cada una con 3–5 equivalentes) |
+| Día | Bloque | Posiciones (cada una con 6–9 equivalentes) |
 |---|---|---|
 | Lun | Torso | Empuje horizontal · Tracción vertical · Tracción horizontal · Deltoide lateral* |
 | Mar | Pierna A | Sentadilla/prensa · Bisagra de cadera · Extensión de rodilla · Pantorrilla* |
@@ -17,6 +17,17 @@ Registro de entrenamiento para el celular (PWA): rutina lunes a viernes de 4 eje
 | Vie | Pierna B | Glúteo · Curl femoral · Unilateral · Deltoide lateral* |
 
 \* opcional si falta tiempo. Las referencias científicas están dentro de la app (Menú → Referencias).
+
+## Semana flexible
+
+La app no ata cada sesión a un día fijo: la **cola** se calcula con el historial de la semana actual (lunes a domingo).
+
+- **Orden**: Torso → Pierna A → Push → Pull → Pierna B. La próxima sesión es la primera de esa lista que todavía no hiciste esta semana.
+- **Si faltas**: la cola corre sola. Si faltaste el martes, el miércoles toca Pierna A (no Push), y así con el resto.
+- **Hoy ya entrenaste**: la próxima sesión arranca mañana.
+- **Días no disponibles**: en la franja semanal toca un día (feriado, viaje) para marcarlo; la cola lo saltea. Toca de nuevo para desmarcarlo. Solo se pueden marcar hoy o días futuros.
+- **Desborde**: si quedan más sesiones que días disponibles, las últimas en el orden **no entran** esta semana y la app lo avisa. El lunes siguiente se arranca de nuevo con Torso.
+- Una sesión hecha en otro día aparece con borde punteado en la pestaña; el historial guarda la fecha real.
 
 ## Progresión sugerida (doble progresión, por ejercicio)
 
