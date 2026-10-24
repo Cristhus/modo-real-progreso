@@ -232,6 +232,8 @@
     machine_kickback: 'machine-glute-kickback', seated_leg_curl_single: 'machine-seated-leg-curl', lying_leg_curl_single: 'machine-hamstring-curl',
     cable_leg_curl: 'cable-single-leg-laying-leg-curl', db_leg_curl: 'dumbbell-leg-curl', db_reverse_lunge: 'dumbbell-alternating-reverse-lunge',
     bb_split_squat: 'barbell-split-squat', db_deficit_lunge: 'dumbbell-deficit-reverse-lunge',
+    machine_abduction: 'machine-hip-abduction', machine_abduction_lean: 'machine-hip-abduction',
+    cable_abduction: 'cable-standing-hip-abduction', db_side_abduction: 'abductor-leg-raise-side-lying',
   };
   for (const e of EXERCISE_LIST) if (MUSCLEWIKI[e.id]) e.mw = 'https://musclewiki.com/es-es/exercise/' + MUSCLEWIKI[e.id];
   const EXERCISES = Object.fromEntries(EXERCISE_LIST.map(e => [e.id, e]));

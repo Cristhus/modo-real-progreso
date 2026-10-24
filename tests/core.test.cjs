@@ -22,12 +22,8 @@ test('catálogo y rutina son consistentes', () => {
   assert.equal(new Set(names).size, names.length, 'nombres únicos');
 });
 
-// Abductores (oct-2026): MuscleWiki está detrás de Cloudflare y su slug no se pudo verificar; van solo con YouTube.
-const SIN_MUSCLEWIKI = new Set(['machine_abduction', 'machine_abduction_lean', 'cable_abduction', 'db_side_abduction']);
-
 test('todos los ejercicios tienen guía de MuscleWiki en español', () => {
   for (const e of M.EXERCISE_LIST) {
-    if (SIN_MUSCLEWIKI.has(e.id)) { assert.equal(e.mw, undefined, e.id + ': enlace sin verificar'); continue; }
     assert.match(e.mw || '', /^https:\/\/musclewiki\.com\/es-es\/exercise\/[a-z0-9-]+$/, e.id);
   }
 });
