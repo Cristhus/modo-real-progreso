@@ -22,8 +22,12 @@ test('catálogo y rutina son consistentes', () => {
   assert.equal(new Set(names).size, names.length, 'nombres únicos');
 });
 
+// Abductores (oct-2026): MuscleWiki está detrás de Cloudflare y su slug no se pudo verificar; van solo con YouTube.
+const SIN_MUSCLEWIKI = new Set(['machine_abduction', 'machine_abduction_lean', 'cable_abduction', 'db_side_abduction']);
+
 test('todos los ejercicios tienen guía de MuscleWiki en español', () => {
   for (const e of M.EXERCISE_LIST) {
+    if (SIN_MUSCLEWIKI.has(e.id)) { assert.equal(e.mw, undefined, e.id + ': enlace sin verificar'); continue; }
     assert.match(e.mw || '', /^https:\/\/musclewiki\.com\/es-es\/exercise\/[a-z0-9-]+$/, e.id);
   }
 });
@@ -344,11 +348,12 @@ test('pasado sin sesión con semana incompleta → missed', () => {
   assert.equal(p.days[1].status, 'missed');
 });
 
-test('catálogo: cada posición tiene 6 o más opciones y ningún exId se repite en el mismo día', () => {
+test('catálogo: cada posición tiene 6 o más opciones (Abductores, 4) y ningún exId se repite en el mismo día', () => {
   for (const day of M.ROUTINE) {
     const seen = new Set();
     for (const s of day.slots) {
-      assert.ok(s.options.length >= 6, s.id + ' tiene ' + s.options.length);
+      // Abductores: no hay 6 variantes reales con carga
+      assert.ok(s.options.length >= (s.id === 'mar4' ? 4 : 6), s.id + ' tiene ' + s.options.length);
       for (const id of s.options) {
         assert.ok(!seen.has(id), day.id + ': ' + id + ' repetido');
         seen.add(id);
@@ -364,8 +369,28 @@ test('catálogo: los 56 ids originales siguen existiendo', () => {
 });
 
 test('catálogo: options[0] de cada posición no cambió (snapshot)', () => {
-  const first = { lun1: 'smith_bench', lun2: 'lat_pulldown', lun3: 'db_row', lun4: 'db_lateral', mar1: 'leg_press', mar2: 'db_rdl', mar3: 'leg_ext', mar4: 'smith_calf', mie1: 'db_incline', mie2: 'db_ohp', mie3: 'cable_oh_ext', mie4: 'cable_fly', jue1: 'lat_pulldown', jue2: 'db_row', jue3: 'db_curl', jue4: 'face_pull', vie1: 'smith_hip_thrust', vie2: 'seated_leg_curl', vie3: 'bulgarian', vie4: 'db_lateral' };
+  const first = { lun1: 'smith_bench', lun2: 'lat_pulldown', lun3: 'db_row', lun4: 'db_lateral', mar1: 'leg_press', mar2: 'machine_hip_thrust', mar3: 'leg_ext', mar4: 'machine_abduction', mie1: 'db_incline', mie2: 'db_ohp', mie3: 'cable_oh_ext', mie4: 'cable_fly', jue1: 'lat_pulldown', jue2: 'db_row', jue3: 'db_curl', jue4: 'face_pull', vie1: 'smith_hip_thrust', vie2: 'seated_leg_curl', vie3: 'bulgarian', vie4: 'db_lateral' };
   const got = {};
   for (const day of M.ROUTINE) for (const s of day.slots) got[s.id] = s.options[0];
   assert.deepEqual(got, first);
+});
+
+test('Pierna A no ofrece peso muerto ni elevación de talones', () => {
+  for (const s of M.DAYS.mar.slots) {
+    for (const id of s.options) {
+      const n = M.EXERCISES[id].name;
+      assert.ok(!/peso muerto|talones|pull through/i.test(n), s.id + ' ofrece ' + n);
+    }
+  }
+});
+
+test('Pierna A: una sesión vieja con peso muerto y talones conserva sus series al editarla', () => {
+  const day = M.DAYS.mar;
+  const old = { id: '2026-10-06_mar', date: '2026-10-06', dayId: 'mar', block: 'PIERNA A', finishedAt: 1, entries: [
+    { slotId: 'mar1', exId: 'leg_press', sets: [{ w: 100, r: 10 }] },
+    { slotId: 'mar2', exId: 'db_rdl', sets: [{ w: 14, r: 10 }, { w: 14, r: 9 }] },
+    { slotId: 'mar4', exId: 'smith_calf', sets: [{ w: 20, r: 12 }] },
+  ] };
+  const back = M.sessionFromDraft(day, M.draftFromSession(day, old), 1);
+  assert.deepEqual(back.entries.map(e => [e.slotId, e.exId, e.sets.length]), [['mar1', 'leg_press', 1], ['mar2', 'db_rdl', 2], ['mar4', 'smith_calf', 1]]);
 });

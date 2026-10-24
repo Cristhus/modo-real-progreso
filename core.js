@@ -182,6 +182,11 @@
     E('db_reverse_lunge', 'Zancada hacia Atrás con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Da un paso largo hacia atrás y baja vertical; empuja con el talón de la pierna de adelante.'),
     E('bb_split_squat', 'Sentadilla Dividida con Barra', 'Cuádriceps · Glúteo', 'bar', 'Pies en zancada fija; baja vertical hasta que la rodilla de atrás casi toque el piso.'),
     E('db_deficit_lunge', 'Zancada hacia Atrás en Déficit con Mancuernas', 'Cuádriceps · Glúteo', 'db', 'Pie de adelante sobre un disco o escalón; paso atrás y baja más profundo, controlado.'),
+    // Abductores
+    E('machine_abduction', 'Abducción de Cadera en Máquina', 'Glúteo medio · Abductores', 'stack', 'Espalda pegada al respaldo; abre las piernas contra las almohadillas, pausa de 1 s afuera y vuelve lento.'),
+    E('machine_abduction_lean', 'Abducción en Máquina con Torso Adelante', 'Glúteo · Abductores', 'stack', 'Misma máquina, torso inclinado hacia adelante sobre los muslos; abre las piernas con pausa y vuelve lento.'),
+    E('cable_abduction', 'Abducción de Cadera en Polea', 'Glúteo medio · Abductores', 'stack', 'Tobillera en polea baja del lado contrario; lleva la pierna hacia afuera sin inclinar el torso y vuelve lento.', { step: 2.5 }),
+    E('db_side_abduction', 'Abducción de Cadera Acostado de Lado con Mancuerna', 'Glúteo medio · Abductores', 'db1', 'De lado sobre el banco o el piso con la mancuerna sobre el muslo de arriba; sube la pierna sin rotar la cadera y baja lento.'),
   ];
   // Guías de MuscleWiki (con video). Slugs tomados de su sitemap y verificados con Chrome
   // (HTTP 200 + video) el 2026-10-02. Se enlaza la versión en español.
@@ -244,11 +249,12 @@
       S('lun3', 'Tracción horizontal', 3, [8, 12], 120, HROW),
       S('lun4', 'Deltoide lateral', 3, [12, 15], 75, LATERAL, true),
     ] },
-    { id: 'mar', dow: 2, short: 'Mar', name: 'Pierna A', focus: 'Cuádriceps · Femoral', block: 'PIERNA A', color: 'legs', slots: [
+    { id: 'mar', dow: 2, short: 'Mar', name: 'Pierna A', focus: 'Cuádriceps · Glúteo', block: 'PIERNA A', color: 'legs', slots: [
       S('mar1', 'Sentadilla / prensa', 4, [8, 12], 150, ['leg_press', 'smith_squat', 'hack_squat', 'goblet_squat', 'bb_squat', 'bb_front_squat', 'belt_squat', 'horizontal_leg_press']),
-      S('mar2', 'Bisagra de cadera', 3, [8, 12], 150, ['db_rdl', 'smith_rdl', 'bb_rdl', 'bb_sldl', 'db_sl_rdl', 'cable_rdl', 'landmine_rdl', 'cable_pull_through']),
+      // mar2 y mar4 conservan el id: las sesiones viejas (peso muerto, talones) se siguen editando sin perder series
+      S('mar2', 'Glúteo', 3, [8, 12], 120, ['machine_hip_thrust', 'smith_hip_thrust', 'bb_hip_thrust', 'db_hip_thrust', 'db_glute_bridge', 'db_single_hip_thrust', 'cable_kickback', 'machine_kickback']),
       S('mar3', 'Extensión de rodilla', 3, [10, 15], 90, ['leg_ext', 'leg_ext_single', 'bulgarian', 'cable_leg_ext', 'smith_sissy', 'goblet_split_squat', 'single_leg_press']),
-      S('mar4', 'Pantorrilla', 3, [10, 15], 75, ['smith_calf', 'press_calf', 'seated_calf', 'standing_calf', 'db_calf', 'db_seated_calf', 'smith_seated_calf'], true),
+      S('mar4', 'Abductores', 3, [12, 15], 75, ['machine_abduction', 'machine_abduction_lean', 'cable_abduction', 'db_side_abduction'], true),
     ] },
     { id: 'mie', dow: 3, short: 'Mié', name: 'Push', focus: 'Pecho · Hombro · Tríceps', block: 'PUSH', color: 'push', slots: [
       S('mie1', 'Press inclinado', 4, [6, 10], 150, ['db_incline', 'smith_incline', 'machine_incline', 'bb_incline', 'db_incline_single', 'db_incline_neutral']),

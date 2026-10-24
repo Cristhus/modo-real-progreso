@@ -8,10 +8,10 @@ Registro de entrenamiento para el celular (PWA): 5 sesiones en 7 días, de 4 eje
 
 ## Rutina
 
-| Día | Bloque | Posiciones (cada una con 6–9 equivalentes) |
+| Día | Bloque | Posiciones (cada una con sus equivalentes) |
 |---|---|---|
 | Lun | Torso | Empuje horizontal · Tracción vertical · Tracción horizontal · Deltoide lateral* |
-| Mar | Pierna A | Sentadilla/prensa · Bisagra de cadera · Extensión de rodilla · Pantorrilla* |
+| Mar | Pierna A | Sentadilla/prensa · Glúteo · Extensión de rodilla · Abductores* |
 | Mié | Push | Press inclinado · Press vertical · Tríceps · Aperturas* |
 | Jue | Pull | Tracción vertical · Tracción horizontal · Bíceps · Deltoide posterior* |
 | Vie | Pierna B | Glúteo · Curl femoral · Unilateral · Deltoide lateral* |
