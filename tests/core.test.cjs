@@ -390,3 +390,63 @@ test('Pierna A: una sesión vieja con peso muerto y talones conserva sus series 
   const back = M.sessionFromDraft(day, M.draftFromSession(day, old), 1);
   assert.deepEqual(back.entries.map(e => [e.slotId, e.exId, e.sets.length]), [['mar1', 'leg_press', 1], ['mar2', 'db_rdl', 2], ['mar4', 'smith_calf', 1]]);
 });
+
+test('mergeState: une Lunes del Espacio Principal con Martes del Segundo Espacio sin cruces', () => {
+  const espacio1 = {
+    v: 2, updatedAt: 100,
+    sessions: [{ id: '2026-10-26_lun', date: '2026-10-26', dayId: 'lun', block: 'TORSO', finishedAt: 100, entries: [{ exId: 'smith_bench', sets: [{ w: 40, r: 8 }] }] }],
+    deleted: {}, drafts: {}, custom: {}, settings: { primary: { lun1: 'smith_bench' }, off: [], updatedAt: 100 },
+  };
+  const espacio2 = {
+    v: 2, updatedAt: 200,
+    sessions: [{ id: '2026-10-27_mar', date: '2026-10-27', dayId: 'mar', block: 'PIERNA A', finishedAt: 200, entries: [{ exId: 'leg_press', sets: [{ w: 120, r: 10 }] }] }],
+    deleted: {}, drafts: {}, custom: {}, settings: { primary: { mar4: 'machine_abduction' }, off: [], updatedAt: 200 },
+  };
+  const m1 = M.mergeState(espacio1, espacio2);
+  assert.equal(m1.added, 1);
+  assert.equal(m1.localChanged, true);
+  assert.equal(m1.remoteChanged, true);
+  assert.deepEqual(m1.state.sessions.map(s => s.id), ['2026-10-26_lun', '2026-10-27_mar']);
+  assert.equal(m1.state.settings.primary.lun1, 'smith_bench');
+  assert.equal(m1.state.settings.primary.mar4, 'machine_abduction');
+
+  // El miércoles (2026-10-28), con la fusión ambos espacios ven Lunes y Martes hechos (2/5) y Miércoles = Push
+  const plan = M.weekPlan(m1.state.sessions, '2026-10-28', m1.state.settings.off);
+  assert.deepEqual(plan.done, { lun: '2026-10-26', mar: '2026-10-27' });
+  assert.equal(plan.next, 'mie');
+  assert.equal(plan.nextDate, '2026-10-28');
+
+  // Segunda sincronización: ya están iguales → no vuelve a marcar cambios
+  const m2 = M.mergeState(m1.state, M.parseBackup(M.buildBackup(m1.state)));
+  assert.equal(m2.localChanged, false);
+  assert.equal(m2.remoteChanged, false);
+});
+
+test('mergeState: fusiona series en borrador del mismo día y respeta sesiones borradas (tombstones)', () => {
+  const local = {
+    v: 2,
+    sessions: [{ id: '2026-10-26_lun', date: '2026-10-26', dayId: 'lun', finishedAt: 100, entries: [] }],
+    deleted: {},
+    drafts: {
+      mie: { date: '2026-10-28', startedAt: 300, updatedAt: 310, slots: {
+        mie1: { active: 'db_incline', byEx: { db_incline: [{ w: '16', r: '10', done: true, t: 310 }, { w: '', r: '', done: false }] } },
+      } },
+    },
+  };
+  const remote = {
+    v: 2,
+    sessions: [],
+    deleted: { '2026-10-26_lun': 150 },
+    drafts: {
+      mie: { date: '2026-10-28', startedAt: 300, updatedAt: 350, slots: {
+        mie1: { active: 'db_incline', byEx: { db_incline: [{ w: '16', r: '10', done: true, t: 310 }, { w: '16', r: '9', done: true, t: 350 }] } },
+      } },
+    },
+  };
+  const res = M.mergeState(local, remote);
+  assert.equal(res.state.sessions.length, 0, 'la sesión borrada con tombstone posterior no revive');
+  const rows = res.state.drafts.mie.slots.mie1.byEx.db_incline;
+  assert.equal(rows[0].done, true);
+  assert.equal(rows[1].done, true);
+  assert.equal(rows[1].r, '9');
+});

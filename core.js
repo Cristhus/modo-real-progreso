@@ -624,20 +624,35 @@
     return { sessions, custom };
   }
 
-  // ---------- Respaldo JSON ----------
+  // ---------- Respaldo JSON y Sincronización entre espacios ----------
   function buildBackup(state) {
     return JSON.stringify({
       app: 'modo-real-progreso', format: 2, exportedAt: new Date().toISOString(),
-      sessions: sortSessions(state.sessions), custom: state.custom || {},
-      primary: (state.settings && state.settings.primary) || {},
+      updatedAt: (state && state.updatedAt) || 0,
+      sessions: sortSessions((state && state.sessions) || []),
+      deleted: (state && state.deleted) || {},
+      drafts: (state && state.drafts) || {},
+      custom: (state && state.custom) || {},
+      primary: (state && state.settings && state.settings.primary) || {},
+      off: (state && state.settings && state.settings.off) || [],
+      settingsUpdatedAt: (state && state.settings && state.settings.updatedAt) || 0,
     }, null, 1);
   }
   function parseBackup(text) {
     let o;
-    try { o = JSON.parse(text); } catch (e) { return null; }
+    try { o = typeof text === 'string' ? JSON.parse(text) : text; } catch (e) { return null; }
     if (!o || o.app !== 'modo-real-progreso' || !Array.isArray(o.sessions)) return null;
     const sessions = o.sessions.filter(s => s && typeof s.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && Array.isArray(s.entries));
-    return { sessions, custom: o.custom || {}, primary: o.primary || {} };
+    return {
+      updatedAt: Number(o.updatedAt) || 0,
+      sessions,
+      deleted: (o.deleted && typeof o.deleted === 'object') ? o.deleted : {},
+      drafts: (o.drafts && typeof o.drafts === 'object') ? o.drafts : {},
+      custom: (o.custom && typeof o.custom === 'object') ? o.custom : {},
+      primary: (o.primary && typeof o.primary === 'object') ? o.primary : ((o.settings && o.settings.primary) || {}),
+      off: Array.isArray(o.off) ? o.off : ((o.settings && Array.isArray(o.settings.off)) ? o.settings.off : []),
+      settingsUpdatedAt: Number(o.settingsUpdatedAt || (o.settings && o.settings.updatedAt)) || 0,
+    };
   }
 
   // mode: 'skip' (TXT: no pisa lo existente) | 'replace' (respaldo JSON)
@@ -650,6 +665,159 @@
       } else { map.set(s.id, s); added++; }
     }
     return { sessions: sortSessions([...map.values()]), added, replaced, skipped };
+  }
+
+  function sessionStamp(s) { return Number(s && (s.updatedAt || s.finishedAt)) || 0; }
+  function sessionSetsCount(s) {
+    return ((s && s.entries) || []).reduce((n, e) => n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
+  }
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + canon(v[k])).join(',') + '}';
+    }
+    return JSON.stringify(v);
+  }
+  function mergeRow(a, b) {
+    if (!a) return b;
+    if (!b) return a;
+    const da = !!a.done, db = !!b.done;
+    if (da !== db) return da ? a : b;
+    const ta = Number(a.t) || 0, tb = Number(b.t) || 0;
+    if (ta !== tb) return tb > ta ? b : a;
+    const ca = rowCounts(a), cb = rowCounts(b);
+    if (ca !== cb) return cb ? b : a;
+    const fa = (a.w !== '' ? 1 : 0) + (a.r !== '' ? 1 : 0);
+    const fb = (b.w !== '' ? 1 : 0) + (b.r !== '' ? 1 : 0);
+    return fb > fa ? b : a;
+  }
+  function mergeDraft(da, db) {
+    if (!da) return db ? JSON.parse(JSON.stringify(db)) : null;
+    if (!db) return JSON.parse(JSON.stringify(da));
+    if (da.date !== db.date) return JSON.parse(JSON.stringify(db.date > da.date ? db : da));
+    const ta = Number(da.updatedAt || da.startedAt) || 0;
+    const tb = Number(db.updatedAt || db.startedAt) || 0;
+    const newer = tb >= ta ? db : da;
+    const slots = {};
+    const sa = da.slots || {}, sb = db.slots || {};
+    for (const slotId of new Set([...Object.keys(sa), ...Object.keys(sb)])) {
+      const sla = sa[slotId], slb = sb[slotId];
+      if (!sla || !slb) { slots[slotId] = JSON.parse(JSON.stringify(sla || slb)); continue; }
+      const byEx = {};
+      const exa = sla.byEx || {}, exb = slb.byEx || {};
+      for (const exId of new Set([...Object.keys(exa), ...Object.keys(exb)])) {
+        const ra = exa[exId] || [], rb = exb[exId] || [];
+        const len = Math.max(ra.length, rb.length);
+        const rows = [];
+        for (let i = 0; i < len; i++) rows.push(Object.assign({}, mergeRow(ra[i], rb[i])));
+        byEx[exId] = rows;
+      }
+      const actNew = (newer.slots && newer.slots[slotId] && newer.slots[slotId].active) || sla.active;
+      const actOther = newer === db ? sla.active : slb.active;
+      const active = (byEx[actNew] && byEx[actNew].some(rowCounts)) ? actNew
+        : (byEx[actOther] && byEx[actOther].some(rowCounts)) ? actOther : actNew;
+      slots[slotId] = { active, byEx };
+    }
+    const sMin = Math.min(Number(da.startedAt) || Infinity, Number(db.startedAt) || Infinity);
+    return {
+      date: newer.date,
+      startedAt: sMin === Infinity ? (ta || tb || 0) : sMin,
+      updatedAt: Math.max(ta, tb),
+      slots,
+    };
+  }
+
+  // Fusiona dos estados completos (ej. Espacio Principal + Segundo Espacio) sin perder series ni sesiones
+  function mergeState(local, remote) {
+    const L = local || {}, R = remote || {};
+    const lDel = (L.deleted && typeof L.deleted === 'object') ? L.deleted : {};
+    const rDel = (R.deleted && typeof R.deleted === 'object') ? R.deleted : {};
+    const deleted = {};
+    for (const id of new Set([...Object.keys(lDel), ...Object.keys(rDel)])) {
+      const t = Math.max(Number(lDel[id]) || 0, Number(rDel[id]) || 0);
+      if (t > 0) deleted[id] = t;
+    }
+
+    const lSessions = Array.isArray(L.sessions) ? L.sessions : [];
+    const rSessions = Array.isArray(R.sessions) ? R.sessions : [];
+    const lMap = new Map(lSessions.map(s => [s.id, s]));
+    const rMap = new Map(rSessions.map(s => [s.id, s]));
+    const mergedMap = new Map();
+    let added = 0, updated = 0;
+
+    for (const [id, ls] of lMap) {
+      if (deleted[id] && deleted[id] > sessionStamp(ls)) continue;
+      mergedMap.set(id, ls);
+    }
+    for (const [id, rs] of rMap) {
+      const rStamp = sessionStamp(rs);
+      if (deleted[id] && deleted[id] > rStamp) continue;
+      if (!mergedMap.has(id)) {
+        mergedMap.set(id, rs);
+        if (!lMap.has(id)) added++;
+      } else {
+        const ls = mergedMap.get(id);
+        const lStamp = sessionStamp(ls);
+        const rWins = rStamp > lStamp || (rStamp === lStamp && sessionSetsCount(rs) > sessionSetsCount(ls));
+        if (rWins) {
+          if (canon(ls) !== canon(rs)) updated++;
+          mergedMap.set(id, rs);
+        }
+      }
+    }
+    const sessions = sortSessions([...mergedMap.values()]);
+    const sessById = new Map(sessions.map(s => [s.id, s]));
+
+    const lDrafts = (L.drafts && typeof L.drafts === 'object') ? L.drafts : {};
+    const rDrafts = (R.drafts && typeof R.drafts === 'object') ? R.drafts : {};
+    const drafts = {};
+    for (const dayId of new Set([...Object.keys(lDrafts), ...Object.keys(rDrafts)])) {
+      const md = mergeDraft(lDrafts[dayId], rDrafts[dayId]);
+      if (!md || !md.date) continue;
+      const doneS = sessById.get(md.date + '_' + dayId);
+      if (doneS && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
+      drafts[dayId] = md;
+    }
+
+    const custom = Object.assign({}, R.custom || {}, L.custom || {});
+    const lSet = L.settings || {};
+    const rSet = R.settings || {};
+    const lPrimary = L.primary || lSet.primary || {};
+    const rPrimary = R.primary || rSet.primary || {};
+    const lOff = Array.isArray(L.off) ? L.off : (Array.isArray(lSet.off) ? lSet.off : []);
+    const rOff = Array.isArray(R.off) ? R.off : (Array.isArray(rSet.off) ? rSet.off : []);
+    const lSetStamp = Number(L.settingsUpdatedAt || lSet.updatedAt) || 0;
+    const rSetStamp = Number(R.settingsUpdatedAt || rSet.updatedAt) || 0;
+    const primary = rSetStamp > lSetStamp ? Object.assign({}, lPrimary, rPrimary) : Object.assign({}, rPrimary, lPrimary);
+    const off = (lSetStamp > 0 || rSetStamp > 0)
+      ? [...new Set(rSetStamp > lSetStamp ? rOff : lOff)]
+      : [...new Set([...lOff, ...rOff])];
+    const settingsUpdatedAt = Math.max(lSetStamp, rSetStamp);
+
+    const snap = (sess, del, drf, cst, pri, ofList) => canon({
+      s: sortSessions(sess), d: del, f: drf, c: cst, p: pri, o: [...new Set(ofList)].sort(),
+    });
+    const mergedSnap = snap(sessions, deleted, drafts, custom, primary, off);
+    const localSnap = snap(lSessions, lDel, lDrafts, L.custom || {}, lPrimary, lOff);
+    const remoteSnap = snap(rSessions, rDel, rDrafts, R.custom || {}, rPrimary, rOff);
+
+    const settings = Object.assign({}, lSet, { primary, off, updatedAt: settingsUpdatedAt });
+    const state = Object.assign({}, L, {
+      v: 2,
+      updatedAt: Math.max(Number(L.updatedAt) || 0, Number(R.updatedAt) || 0, Date.now()),
+      sessions,
+      deleted,
+      drafts,
+      custom,
+      settings,
+    });
+    return {
+      state,
+      added,
+      updated,
+      localChanged: mergedSnap !== localSnap,
+      remoteChanged: mergedSnap !== remoteSnap,
+    };
   }
 
   // ---------- Semana flexible: cola de sesiones L–D ----------
@@ -707,7 +875,7 @@
     exerciseIdByName, equipOf, stepUp, formatSets, sortSessions, performances, lastPerformance,
     workingSet, recommend, referenceFromEquivalents, emptyRows, newSlotDraft, rowCounts,
     sessionFromDraft, draftFromSession, slotFor, upsertSession, commitStaleDrafts, estMinutes,
-    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions,
+    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState,
     addDays, weekStart, weekPlan, moved,
   };
 });

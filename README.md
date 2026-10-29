@@ -3,7 +3,7 @@
 Registro de entrenamiento para el celular (PWA): 5 sesiones en 7 días, de 4 ejercicios cada una, con **ejercicios equivalentes intercambiables** (por si la máquina está ocupada) y **sugerencia de peso y repeticiones** basada en la última vez que hiciste cada ejercicio.
 
 - Funciona sin conexión y se instala como app.
-- Los datos quedan **solo en el dispositivo** (IndexedDB + localStorage). Para no perderlos: Menú → Respaldo (JSON).
+- Los datos se guardan en el dispositivo (IndexedDB + localStorage) y opcionalmente se **sincronizan y fusionan automáticamente** entre espacios (ej. Xiaomi Segundo Espacio) o dispositivos mediante un Gist privado de GitHub (`⇄` / Menú → Sincronizar espacios).
 - Exporta el mismo formato TXT que la versión anterior.
 
 ## Rutina

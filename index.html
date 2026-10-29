@@ -46,11 +46,15 @@ a{color:inherit}
 
 /* ===== HEADER ===== */
 .top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 0 4px}
+.top-btns{display:flex;gap:8px;flex:none}
 .eyebrow{font-family:var(--cond);font-weight:600;letter-spacing:.2em;text-transform:uppercase;font-size:.7rem;color:var(--muted)}
 h1{font-family:var(--display);font-weight:400;font-size:clamp(1.9rem,8vw,2.7rem);line-height:1;text-transform:uppercase;letter-spacing:.01em;margin-top:.2rem}
 h1 .accent{color:var(--push)}
 .iconbtn{position:relative;flex:none;width:46px;height:46px;border-radius:12px;border:1px solid var(--steel-600);background:var(--steel-800);font-size:1.35rem;cursor:pointer}
 .iconbtn .dot{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;background:var(--legs);box-shadow:0 0 8px var(--legs)}
+.iconbtn .dot.ok{background:var(--force);box-shadow:0 0 8px var(--force)}
+.iconbtn .dot.err{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.sync-in{width:100%;height:44px;background:var(--steel-800);color:var(--chalk);border:1px solid var(--steel-600);border-radius:10px;padding:0 12px;font-family:ui-monospace,monospace;font-size:.82rem;margin-bottom:8px}
 .banner{margin-top:12px;display:flex;align-items:center;gap:10px;justify-content:space-between;background:color-mix(in srgb,var(--legs) 12%,var(--steel-900));border:1px solid color-mix(in srgb,var(--legs) 45%,transparent);border-radius:10px;padding:9px 12px;font-size:.88rem;color:var(--chalk)}
 .banner .btn{padding:7px 12px;flex:none}
 
@@ -265,7 +269,10 @@ footer.foot button{background:none;border:none;color:var(--chalk-dim);text-decor
       <div class="eyebrow">5 sesiones en 7 días · Torso · Pierna · Push · Pull · Pierna</div>
       <h1>Modo <span class="accent">Real</span> Progreso</h1>
     </div>
-    <button class="iconbtn" data-act="menu" aria-label="Abrir menú">&#9776;<i class="dot" id="menu-dot" hidden></i></button>
+    <div class="top-btns">
+      <button class="iconbtn" id="sync-btn" data-act="sync-open" aria-label="Sincronizar espacios">&#8644;<i class="dot" id="sync-dot" hidden></i></button>
+      <button class="iconbtn" data-act="menu" aria-label="Abrir menú">&#9776;<i class="dot" id="menu-dot" hidden></i></button>
+    </div>
   </header>
   <div id="banner"></div>
   <div id="week"></div>
@@ -338,39 +345,267 @@ const Store = (() => {
     if (a && b) return b.updatedAt > a.updatedAt ? b : a;
     return a || b;
   }
-  function write() {
+  function write(skipSync) {
     timer = null;
     state.updatedAt = Date.now();
     const json = JSON.stringify(state);
     try { localStorage.setItem(LS_KEY, json); } catch (e) { /* cuota o modo privado */ }
     idbSet('state', json).catch(() => {});
+    if (!skipSync && typeof Sync !== 'undefined') Sync.schedule(false);
   }
-  function save(now) {
-    if (now) { clearTimeout(timer); write(); return; }
-    if (!timer) timer = setTimeout(write, 250);
+  function save(now, skipSync) {
+    if (now) { clearTimeout(timer); write(skipSync); if (!skipSync && typeof Sync !== 'undefined') Sync.schedule(true); return; }
+    if (!timer) timer = setTimeout(() => write(skipSync), 250);
   }
-  function flush() { if (timer) { clearTimeout(timer); write(); } }
-  return { load, save, flush };
+  function flush() { if (timer) { clearTimeout(timer); write(false); } }
+  return { load, save, flush, idbGet, idbSet };
 })();
 
 function defaultState() {
-  return { v: 2, updatedAt: 0, sessions: [], drafts: {}, custom: {}, settings: { timer: true, primary: {}, lastBackupAt: 0, lastBackupCount: 0, tab: null, off: [] } };
+  return { v: 2, updatedAt: 0, sessions: [], deleted: {}, drafts: {}, custom: {}, settings: { timer: true, primary: {}, lastBackupAt: 0, lastBackupCount: 0, tab: null, off: [], updatedAt: 0 } };
 }
 function normalize(s) {
   const d = defaultState();
   if (!s || typeof s !== 'object') return d;
   s.v = 2;
   s.sessions = Array.isArray(s.sessions) ? s.sessions : [];
+  s.deleted = s.deleted && typeof s.deleted === 'object' ? s.deleted : {};
   s.drafts = s.drafts && typeof s.drafts === 'object' ? s.drafts : {};
   s.custom = s.custom && typeof s.custom === 'object' ? s.custom : {};
   s.settings = Object.assign(d.settings, s.settings || {});
   s.settings.primary = s.settings.primary || {};
+  s.settings.updatedAt = Number(s.settings.updatedAt) || 0;
   // Días no disponibles: solo fechas ISO válidas desde el lunes de esta semana
   const minDate = M.weekStart(today);
   const off = Array.isArray(s.settings.off) ? s.settings.off : [];
   s.settings.off = [...new Set(off.filter(x => typeof x === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x) && x >= minDate))];
   return s;
 }
+
+// ================= Sincronización entre espacios (GitHub Gist privado) =================
+const Sync = (() => {
+  const KEY = 'mrp_sync_v1', FILE = 'mrp_sync_v2.json';
+  let cfg = null, busy = false, queued = false, pushT = null;
+
+  function parseCfg(raw) {
+    try {
+      const o = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return o && typeof o.token === 'string' && o.token ? o : null;
+    } catch (e) { return null; }
+  }
+  async function init() {
+    let a = null, b = null;
+    try { b = parseCfg(localStorage.getItem(KEY)); } catch (e) {}
+    try { a = parseCfg(await Store.idbGet('sync')); } catch (e) {}
+    cfg = b || a || null;
+    checkUrlCode();
+    updateDot();
+  }
+  function saveCfg() {
+    const json = cfg ? JSON.stringify(cfg) : '';
+    try {
+      if (cfg) localStorage.setItem(KEY, json); else localStorage.removeItem(KEY);
+    } catch (e) {}
+    Store.idbSet('sync', json).catch(() => {});
+    updateDot();
+  }
+  function parseCode(str) {
+    const s = String(str || '').trim();
+    if (!s) return null;
+    const mUrl = s.match(/[#?&]sync=([^&#\s]+)/i);
+    const payload = mUrl ? decodeURIComponent(mUrl[1]) : s;
+    const sep = payload.indexOf(':') >= 0 ? ':' : (payload.indexOf('|') >= 0 ? '|' : '');
+    if (sep) {
+      const [tk, gid] = payload.split(sep).map(x => x.trim());
+      if (tk && /^(gh[pousr]_|github_pat_)/i.test(tk) && /^[a-f0-9]{16,40}$/i.test(gid)) {
+        return { token: tk, gistId: gid };
+      }
+    }
+    if (/^(gh[pousr]_|github_pat_)[A-Za-z0-9_]{10,}$/.test(payload)) {
+      return { token: payload, gistId: '' };
+    }
+    return null;
+  }
+  function checkUrlCode() {
+    const raw = location.hash || location.search || '';
+    if (!/[#?&]sync=/i.test(raw)) return false;
+    const parsed = parseCode(raw);
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    if (!parsed) return false;
+    cfg = { token: parsed.token, gistId: parsed.gistId || (cfg && cfg.gistId) || '', lastSyncAt: 0, dirty: true, lastError: '' };
+    saveCfg();
+    setTimeout(() => sync({ notifyLinked: true }), 80);
+    return true;
+  }
+  function isConfigured() { return !!(cfg && cfg.token); }
+  function code() { return cfg && cfg.token && cfg.gistId ? cfg.token + ':' + cfg.gistId : ''; }
+  function magicUrl() {
+    const c = code();
+    return c ? location.origin + location.pathname + '#sync=' + encodeURIComponent(c) : '';
+  }
+  function statusShort() {
+    if (!isConfigured()) return 'Sin configurar';
+    if (busy) return 'Sincronizando…';
+    if (cfg.lastError) return 'Pendiente (sin red)';
+    if (cfg.dirty) return 'Pendiente de subir';
+    if (cfg.lastSyncAt) {
+      const mins = Math.max(0, Math.round((Date.now() - cfg.lastSyncAt) / 60000));
+      return mins < 1 ? 'Al día ✓ (ahora)' : mins < 60 ? `Al día ✓ (hace ${mins} min)` : 'Al día ✓';
+    }
+    return 'Conectado';
+  }
+  function updateDot() {
+    const dot = $('#sync-dot');
+    const btn = $('#sync-btn');
+    if (!dot || !btn) return;
+    if (!isConfigured()) {
+      dot.hidden = true;
+      btn.title = 'Sincronizar entre espacios (no configurado)';
+      return;
+    }
+    dot.hidden = false;
+    dot.classList.remove('ok', 'err');
+    if (cfg.lastError) dot.classList.add('err');
+    else if (!cfg.dirty && cfg.lastSyncAt) dot.classList.add('ok');
+    btn.title = 'Sincronización: ' + statusShort();
+  }
+  async function ghFetch(path, opts) {
+    const res = await fetch('https://api.github.com' + path, Object.assign({
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: 'Bearer ' + cfg.token,
+        'Content-Type': 'application/json',
+      },
+    }, opts || {}));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+  async function ensureGist() {
+    if (cfg.gistId) return cfg.gistId;
+    const list = await ghFetch('/gists?per_page=50');
+    if (Array.isArray(list)) {
+      const found = list.find(g => g && g.files && g.files[FILE]);
+      if (found && found.id) { cfg.gistId = found.id; saveCfg(); return cfg.gistId; }
+    }
+    const created = await ghFetch('/gists', {
+      method: 'POST',
+      body: JSON.stringify({
+        description: 'Modo Real Progreso — Sincronización entre espacios',
+        public: false,
+        files: { [FILE]: { content: M.buildBackup(state) } },
+      }),
+    });
+    cfg.gistId = created.id;
+    saveCfg();
+    return cfg.gistId;
+  }
+  async function sync(opts) {
+    opts = opts || {};
+    if (!isConfigured() || !state) return false;
+    if (busy) { queued = true; return false; }
+    busy = true;
+    updateDot();
+    try {
+      const gid = await ensureGist();
+      const gist = await ghFetch('/gists/' + gid);
+      const f = gist && gist.files && gist.files[FILE];
+      const remote = f && f.content ? M.parseBackup(f.content) : null;
+      const res = remote ? M.mergeState(state, remote) : { state, added: 0, updated: 0, localChanged: false, remoteChanged: true };
+      if (res.localChanged) {
+        const hadToday = state.sessions.some(s => s.date === today);
+        state = normalize(res.state);
+        const hasTodayNow = state.sessions.some(s => s.date === today);
+        if (ui.view === 'day' && (!DAYS[ui.day] || (!hadToday && hasTodayNow))) ui.day = defaultDay();
+        Store.save(true, true);
+        render();
+      }
+      if (res.remoteChanged || cfg.dirty || !remote) {
+        await ghFetch('/gists/' + gid, {
+          method: 'PATCH',
+          body: JSON.stringify({ files: { [FILE]: { content: M.buildBackup(state) } } }),
+        });
+      }
+      cfg.dirty = false;
+      cfg.lastError = '';
+      cfg.lastSyncAt = Date.now();
+      state.settings.lastBackupAt = cfg.lastSyncAt;
+      state.settings.lastBackupCount = state.sessions.length;
+      Store.save(true, true);
+      saveCfg();
+      renderBanner();
+      if (opts.notifyLinked) {
+        toast('Espacio vinculado ✓ (' + state.sessions.length + ' sesiones sincronizadas)', 3800);
+      } else if (opts.manual) {
+        const msg = res.added ? `Sincronizado ✓ (+${res.added} del otro espacio)` : res.updated ? 'Sincronizado ✓ (actualizado)' : 'Sincronizado ✓ Todo al día';
+        toast(msg);
+      } else if (res.added > 0) {
+        toast('Sincronizado: +' + res.added + (res.added === 1 ? ' sesión del otro espacio' : ' sesiones del otro espacio'), 3500);
+      }
+      return true;
+    } catch (err) {
+      cfg.lastError = (err && err.message) || 'sin conexión';
+      saveCfg();
+      if (opts.manual || opts.notifyLinked) {
+        toast('No se pudo sincronizar (' + cfg.lastError + '). Revisa el código o tu conexión.', 4000);
+      }
+      return false;
+    } finally {
+      busy = false;
+      updateDot();
+      if ($('#sync-status-box')) renderSyncBox();
+      if (queued) { queued = false; schedule(false); }
+    }
+  }
+  function schedule(immediate) {
+    if (!isConfigured()) return;
+    cfg.dirty = true;
+    saveCfg();
+    clearTimeout(pushT);
+    pushT = setTimeout(() => sync({ silent: true }), immediate ? 150 : 1200);
+  }
+  async function connectWithInput(raw) {
+    const parsed = parseCode(raw);
+    if (!parsed) {
+      toast('Pega un enlace #sync=..., un código token:gistId o un token ghp_...', 4000);
+      return false;
+    }
+    cfg = { token: parsed.token, gistId: parsed.gistId || '', lastSyncAt: 0, dirty: true, lastError: '' };
+    saveCfg();
+    return sync({ notifyLinked: true });
+  }
+  function disconnect() {
+    clearTimeout(pushT);
+    cfg = null;
+    saveCfg();
+  }
+  function renderSyncBox() {
+    const box = $('#sync-status-box');
+    if (!box) return;
+    if (!isConfigured()) {
+      box.innerHTML = `<p class="sheet-note">En Xiaomi <b>Segundo Espacio</b> el navegador está aislado del Espacio Principal. Vincula ambos espacios una sola vez para que tus sesiones (Lunes, Martes…) y las series en curso se fusionen solas.</p>
+      <input class="sync-in" id="sync-input" type="text" autocomplete="off" placeholder="Pega aquí tu enlace #sync=... o token ghp_...">
+      <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="sync-connect">Vincular y fusionar</button><button class="btn ghost" data-act="close-sheet">Cerrar</button></div>`;
+      return;
+    }
+    const last = cfg.lastSyncAt ? new Date(cfg.lastSyncAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'nunca';
+    box.innerHTML = `<div class="rec rec-increase" style="margin-bottom:12px">
+      <div>Estado: <b>${esc(statusShort())}</b></div>
+      <div class="rec-msg">Última sincronización: ${esc(last)} · Gist: <code>${esc((cfg.gistId || '').slice(0, 8))}…</code></div>
+    </div>
+    <p class="sheet-note">Para vincular el <b>Segundo Espacio</b> (o tu PC): copia el enlace mágico, ábrelo en el navegador del otro espacio y quedará conectado para siempre.</p>
+    <div class="row-btns">
+      <button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="sync-now">↻ Sincronizar ahora</button>
+      <button class="btn" data-act="sync-copy-url">Copiar enlace mágico</button>
+    </div>
+    <div class="row-btns">
+      <button class="btn" data-act="sync-copy-code">Copiar código corto</button>
+      <button class="btn danger" data-act="sync-unlink">Desvincular</button>
+    </div>
+    <div class="row-btns"><button class="btn ghost block" data-act="close-sheet">Cerrar</button></div>`;
+  }
+  return { init, isConfigured, statusShort, sync, schedule, connectWithInput, disconnect, renderSyncBox, parseCode, magicUrl, code };
+})();
 
 // ================= Acceso a datos =================
 const getEx = id => EXERCISES[id] || state.custom[id] || { id, name: id, tag: '', equip: 'stack', cue: '' };
@@ -818,6 +1053,7 @@ A['toggle-off'] = t => {
   const off = state.settings.off;
   const i = off.indexOf(d);
   if (i >= 0) off.splice(i, 1); else off.push(d);
+  state.settings.updatedAt = Date.now();
   // Si se tocó hoy, la vista del día se ajusta al nuevo estado (y se guarda para recargas)
   if (d === today && ui.view === 'day') {
     if (state.settings.off.includes(today)) ui.day = 'rest';
@@ -849,12 +1085,14 @@ A.check = t => {
     }
     if (c.row.r === '' && rIn.placeholder) { c.row.r = rIn.placeholder; rIn.value = c.row.r; }
     c.row.done = true;
-    if (!c.row.t) c.row.t = Date.now();
+    c.row.t = Date.now();
     if (navigator.vibrate) navigator.vibrate(15);
     startTimer(c.slot.rest);
   } else {
     c.row.done = false;
+    c.row.t = Date.now();
   }
+  c.draft.updatedAt = Date.now();
   c.rowEl.classList.toggle('done', c.row.done);
   t.setAttribute('aria-pressed', String(c.row.done));
   updateProgress();
@@ -865,6 +1103,7 @@ A.check = t => {
 A.addset = t => {
   const c = rowCtx(t);
   c.rows.push({ w: '', r: '', done: false });
+  c.draft.updatedAt = Date.now();
   Store.save();
   rerenderCard(c.slot.id);
 };
@@ -873,6 +1112,7 @@ A.rmset = t => {
   if (c.rows.length <= 1) return;
   if (c.rows[c.rows.length - 1].done) { toast('La última serie está marcada: desmárcala primero'); return; }
   c.rows.pop();
+  c.draft.updatedAt = Date.now();
   Store.save();
   rerenderCard(c.slot.id);
 };
@@ -906,9 +1146,11 @@ function openSwap(slotId) {
 }
 A.pick = t => {
   const { day, slot } = findSlot(t.dataset.slot);
-  const sd = slotDraft(getDraft(day, true), slot);
+  const draft = getDraft(day, true);
+  const sd = slotDraft(draft, slot);
   sd.active = t.dataset.ex;
   if (!sd.byEx[sd.active]) sd.byEx[sd.active] = M.emptyRows(slot.sets);
+  draft.updatedAt = Date.now();
   Store.save();
   closeSheet();
   rerenderCard(slot.id);
@@ -918,6 +1160,7 @@ A.star = t => {
   const p = state.settings.primary;
   if (p[t.dataset.slot] === t.dataset.ex) delete p[t.dataset.slot];
   else p[t.dataset.slot] = t.dataset.ex;
+  state.settings.updatedAt = Date.now();
   Store.save();
   openSwap(t.dataset.slot);
 };
@@ -928,6 +1171,7 @@ A.finish = () => {
   const draft = getDraft(day, false);
   const s = draft && M.sessionFromDraft(day, draft, Date.now());
   if (!s) { toast('Marca al menos una serie ✓ para guardar'); return; }
+  if (state.deleted) delete state.deleted[s.id];
   state.sessions = M.upsertSession(state.sessions, s);
   delete state.drafts[day.id];
   Store.save(true);
@@ -942,6 +1186,9 @@ A.reopen = t => {
   const day = DAYS[s.dayId] || DAYS[ui.day];
   state.drafts[day.id] = M.draftFromSession(day, s);
   state.drafts[day.id].date = today;
+  state.drafts[day.id].updatedAt = Date.now();
+  state.deleted = state.deleted || {};
+  state.deleted[s.id] = Date.now();
   state.sessions = state.sessions.filter(x => x.id !== s.id);
   Store.save(true);
   render();
@@ -966,17 +1213,48 @@ A['share-session'] = t => {
   if (s) shareFile(s.date + '_gym.txt', M.buildTxt(s, state.custom), 'text/plain');
 };
 
-// ----- Menú -----
+// ----- Menú y Sincronización -----
+A['sync-open'] = () => {
+  openSheet(`<div class="sheet-h"><h3>Sincronizar espacios</h3><p>Une automáticamente el Espacio Principal, Segundo Espacio y otros dispositivos sin pisar sesiones.</p></div>
+  <div id="sync-status-box"></div>`);
+  Sync.renderSyncBox();
+};
+A['sync-connect'] = async () => {
+  const inp = $('#sync-input');
+  if (!inp || !inp.value.trim()) { toast('Pega el enlace o token primero'); return; }
+  await Sync.connectWithInput(inp.value);
+};
+A['sync-now'] = () => Sync.sync({ manual: true });
+A['sync-copy-url'] = async () => {
+  const u = Sync.magicUrl();
+  if (!u) return;
+  try { await navigator.clipboard.writeText(u); toast('Enlace mágico copiado ✓ Ábrelo en el 2º Espacio'); }
+  catch (e) { toast('No se pudo copiar automático'); }
+};
+A['sync-copy-code'] = async () => {
+  const c = Sync.code();
+  if (!c) return;
+  try { await navigator.clipboard.writeText(c); toast('Código copiado ✓ Pégalo en el 2º Espacio'); }
+  catch (e) { toast('No se pudo copiar automático'); }
+};
+A['sync-unlink'] = async () => {
+  if (!await ask('¿Desvincular este espacio?', 'Tus sesiones guardadas en este teléfono y en el Gist no se borran; solo deja de sincronizar automáticamente.', 'Desvincular')) return;
+  Sync.disconnect();
+  Sync.renderSyncBox();
+  toast('Sincronización desvinculada');
+};
+
 A.menu = () => {
   const s = state.settings;
   const last = s.lastBackupAt ? M.fmtDate(M.todayISO(new Date(s.lastBackupAt)), true) : 'nunca';
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
   openSheet(`<div class="sheet-h"><h3>Menú</h3></div><div class="menu">
+    <button class="mitem" data-act="sync-open">Sincronizar espacios (Nube) <small>${esc(Sync.statusShort())}</small></button>
     <button class="mitem" data-act="view-history">Historial <small>${state.sessions.length} sesiones</small></button>
     <button class="mitem" data-act="backup">Respaldo completo (JSON) <small>Último: ${last}</small></button>
     <button class="mitem" data-act="export-all">Exportar todo en TXT</button>
     <button class="mitem" data-act="import">Importar TXT o respaldo <small>archivos</small></button>
-    <button class="mitem" data-act="paste">Pegar texto <small>TXT o JSON</small></button>
+    <button class="mitem" data-act="paste">Pegar texto <small>TXT, JSON o código</small></button>
     <label class="mitem"><span>Temporizador de descanso</span><input type="checkbox" data-act="toggle-timer"${s.timer ? ' checked' : ''}></label>
     ${ui.installEvt ? '<button class="mitem" data-act="install">Instalar app en el teléfono</button>' : ''}
     ${ios ? '<div class="mstatus">En iPhone: toca Compartir → “Agregar a inicio” para instalarla.</div>' : ''}
@@ -1050,7 +1328,7 @@ $('#file-in').addEventListener('change', async e => {
   importTexts(texts);
 });
 A.paste = () => {
-  openSheet(`<div class="sheet-h"><h3>Pegar texto</h3><p>Pega el contenido de uno o varios TXT exportados, o de un respaldo JSON.</p></div>
+  openSheet(`<div class="sheet-h"><h3>Pegar texto</h3><p>Pega el contenido de uno o varios TXT exportados, un respaldo JSON o un enlace/código de sincronización.</p></div>
   <textarea class="paste" id="paste-box" placeholder="FECHA: 2026-10-01&#10;BLOQUE: PUSH&#10;…"></textarea>
   <div class="row-btns"><button class="btn primary" style="--bc:var(--force);color:#0d1f14" data-act="paste-go">Importar</button><button class="btn ghost" data-act="close-sheet">Cancelar</button></div>`);
 };
@@ -1058,6 +1336,7 @@ A['paste-go'] = () => {
   const v = ($('#paste-box') || {}).value || '';
   if (!v.trim()) { toast('No hay texto para importar'); return; }
   closeSheet();
+  if (Sync.parseCode(v.trim())) { Sync.connectWithInput(v.trim()); return; }
   importTexts([v]);
 };
 function importTexts(texts) {
@@ -1068,10 +1347,9 @@ function importTexts(texts) {
       const b = M.parseBackup(tr);
       if (!b) { bad++; continue; }
       fromBackup = true;
-      const r = M.mergeSessions(state.sessions, b.sessions, 'replace');
-      state.sessions = r.sessions; added += r.added; replaced += r.replaced;
-      Object.assign(state.custom, b.custom);
-      Object.assign(state.settings.primary, b.primary);
+      const m = M.mergeState(state, b);
+      state = normalize(m.state);
+      added += m.added; replaced += m.updated;
     } else {
       const { sessions, custom } = M.parseTxt(tr);
       if (!sessions.length) { bad++; continue; }
@@ -1098,7 +1376,7 @@ function importTexts(texts) {
 A.wipe = async () => {
   if (!await ask('¿Borrar todo el historial?', 'Se eliminan TODAS las sesiones guardadas en este teléfono. Haz un respaldo antes si quieres conservarlas.', 'Continuar')) return;
   if (!await ask('Última confirmación', 'Esto no se puede deshacer. ¿Borrar definitivamente ' + state.sessions.length + ' sesiones?', 'Borrar todo')) return;
-  state.sessions = []; state.drafts = {};
+  state.sessions = []; state.drafts = {}; state.deleted = {};
   Store.save(true);
   closeSheet();
   render();
@@ -1125,6 +1403,7 @@ A['h-pick'] = t => {
   en.exId = t.dataset.ex;
   en.slotId = undefined;
   en.note = 'Corregido: se había registrado como ' + before;
+  s.updatedAt = Date.now();
   Store.save(true);
   closeSheet();
   render();
@@ -1134,6 +1413,8 @@ A['h-del'] = async t => {
   const s = sessionById(t.dataset.sid);
   if (!s) return;
   if (!await ask('¿Borrar esta sesión?', s.block + ' del ' + M.fmtDate(s.date, true) + '. No se puede deshacer.', 'Borrar')) return;
+  state.deleted = state.deleted || {};
+  state.deleted[s.id] = Date.now();
   state.sessions = state.sessions.filter(x => x.id !== s.id);
   Store.save(true);
   render();
@@ -1171,6 +1452,8 @@ document.addEventListener('input', e => {
   const c = rowCtx(inp);
   if (!c || !c.row) return;
   c.row[f] = clean;
+  c.row.t = Date.now();
+  c.draft.updatedAt = Date.now();
   if (f === 'w') syncWeightHints(inp.closest('.sets'));
   Store.save();
 });
@@ -1202,7 +1485,12 @@ document.addEventListener('pointerdown', () => {
 }, { passive: true });
 
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ui.installEvt = e; });
-document.addEventListener('visibilitychange', () => { if (document.hidden) Store.flush(); else checkDate(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) Store.flush();
+  else { checkDate(); Sync.sync({ silent: true }); }
+});
+window.addEventListener('online', () => Sync.sync({ silent: true }));
+window.addEventListener('hashchange', () => Sync.init());
 window.addEventListener('pagehide', () => Store.flush());
 
 function defaultDay() {
@@ -1228,8 +1516,10 @@ async function boot() {
   state = normalize(await Store.load());
   const c = M.commitStaleDrafts(state, today);
   ui.day = defaultDay();
+  await Sync.init();
   render();
   if (c.length) { Store.save(true); toast('Guardé ' + c.length + ' sesión(es) que habían quedado sin cerrar', 4000); }
+  if (Sync.isConfigured()) Sync.sync({ silent: true });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
