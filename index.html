@@ -634,7 +634,22 @@ function equivalentsOf(exId) {
   set.delete(exId);
   return [...set];
 }
-const savedSession = day => state.sessions.find(s => s.id === today + '_' + day.id);
+const savedSession = (day, p) => {
+  const todayS = state.sessions.find(s => s.id === today + '_' + day.id);
+  if (todayS) return todayS;
+  p = p || plan();
+  if (!p.done || !p.done[day.id]) return null;
+  const list = M.sortSessions(state.sessions.filter(s => s && s.dayId === day.id && s.date >= p.start && s.date <= p.end));
+  return list.length ? list[list.length - 1] : null;
+};
+function draftHasWork(d) {
+  if (!d || !d.slots) return false;
+  return Object.values(d.slots).some(sd => sd && sd.byEx && Object.values(sd.byEx).some(rows => Array.isArray(rows) && rows.some(M.rowCounts)));
+}
+function hasActiveDraft(day) {
+  const d = getDraft(day, false);
+  return !!(d && (d.reopened || ui.repeatDay === day.id || draftHasWork(d)));
+}
 // Plan de la semana (cola de sesiones). Se calcula una vez por render() y se pasa a los helpers.
 const plan = () => M.weekPlan(state.sessions, today, state.settings.off);
 
@@ -713,8 +728,8 @@ function renderMain(p) {
   else if (ui.day === 'rest' || !DAYS[ui.day]) html = restHtml(p);
   else {
     const day = DAYS[ui.day];
-    const saved = savedSession(day);
-    html = saved && !getDraft(day, false) ? savedHtml(day, saved) : dayHtml(day, p);
+    const saved = savedSession(day, p);
+    html = saved && !hasActiveDraft(day) ? savedHtml(day, saved) : dayHtml(day, p);
   }
   $('#main').innerHTML = html;
   if (ui.view === 'day') { updateProgress(); document.querySelectorAll('#main .sets').forEach(syncWeightHints); }
@@ -845,15 +860,19 @@ function entriesHtml(s, editable) {
 }
 
 function savedHtml(day, s) {
+  const isOtherDay = s.date !== today;
   return `<section class="panel" data-day="${day.id}" data-color="${day.color}" style="--bc:${COLORS[day.color]}">
   <div class="block-banner"><div><h2>${esc(day.name)}</h2><div class="focus">${esc(day.focus)}</div></div></div>
   <div class="saved"><div class="saved-h">✓ Sesión guardada · ${DOW[M.dowOf(s.date)]} ${M.fmtDate(s.date, true)}</div>
-    ${entriesHtml(s, false)}
+    ${entriesHtml(s, true)}
     <div class="row-btns">
       <button class="btn primary" data-act="txt-session" data-sid="${esc(s.id)}">⬇ Exportar TXT</button>
       <button class="btn" data-act="share-session" data-sid="${esc(s.id)}">Compartir</button>
     </div>
-    <div class="row-btns"><button class="btn ghost" data-act="reopen" data-sid="${esc(s.id)}">Reabrir para editar</button></div>
+    <div class="row-btns">
+      <button class="btn ghost" data-act="reopen" data-sid="${esc(s.id)}">Reabrir para editar</button>
+      ${isOtherDay ? `<button class="btn ghost" data-act="repeat-today" data-day="${esc(day.id)}">Repetir sesión hoy</button>` : ''}
+    </div>
   </div></section>`;
 }
 
@@ -1041,6 +1060,7 @@ const A = {};
 A.tab = t => {
   ui.view = 'day';
   ui.day = t.dataset.day;
+  ui.repeatDay = null;
   state.settings.tab = { date: today, day: ui.day };
   Store.save();
   render();
@@ -1174,6 +1194,7 @@ A.finish = () => {
   if (state.deleted) delete state.deleted[s.id];
   state.sessions = M.upsertSession(state.sessions, s);
   delete state.drafts[day.id];
+  ui.repeatDay = null;
   Store.save(true);
   stopTimer();
   render();
@@ -1184,9 +1205,12 @@ A.reopen = t => {
   const s = state.sessions.find(x => x.id === t.dataset.sid);
   if (!s) return;
   const day = DAYS[s.dayId] || DAYS[ui.day];
-  state.drafts[day.id] = M.draftFromSession(day, s);
-  state.drafts[day.id].date = today;
-  state.drafts[day.id].updatedAt = Date.now();
+  const d = M.draftFromSession(day, s);
+  d.targetDate = s.date;
+  d.date = today;
+  d.reopened = true;
+  d.updatedAt = Date.now();
+  state.drafts[day.id] = d;
   state.deleted = state.deleted || {};
   state.deleted[s.id] = Date.now();
   state.sessions = state.sessions.filter(x => x.id !== s.id);
@@ -1194,10 +1218,19 @@ A.reopen = t => {
   render();
   toast('Sesión reabierta: edita y vuelve a guardar');
 };
+A['repeat-today'] = t => {
+  const dayId = t.dataset.day || ui.day;
+  delete state.drafts[dayId];
+  ui.repeatDay = dayId;
+  render();
+  window.scrollTo(0, 0);
+  toast('Nueva sesión de hoy lista para anotar');
+};
 A['reset-day'] = async () => {
   const ok = await ask('¿Reiniciar el día?', 'Se borran las series anotadas hoy en este día. El historial no se toca.', 'Sí, reiniciar');
   if (!ok) return;
   delete state.drafts[ui.day];
+  ui.repeatDay = null;
   Store.save(true);
   stopTimer();
   render();

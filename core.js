@@ -503,7 +503,8 @@
       for (const x of list) entries.push(x.entry);
     }
     if (!entries.length) return null;
-    return { id: draft.date + '_' + day.id, date: draft.date, dayId: day.id, block: day.block, entries, finishedAt: finishedAt || Date.now(), source: 'app' };
+    const date = draft.targetDate || draft.date;
+    return { id: date + '_' + day.id, date, dayId: day.id, block: day.block, entries, finishedAt: finishedAt || Date.now(), source: 'app' };
   }
 
   function slotFor(day, exId) { return day.slots.find(s => s.options.includes(exId)) || null; }
