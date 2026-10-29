@@ -450,3 +450,16 @@ test('mergeState: fusiona series en borrador del mismo día y respeta sesiones b
   assert.equal(rows[1].done, true);
   assert.equal(rows[1].r, '9');
 });
+
+test('reabrir sesión de otro día de la semana conserva su fecha original (targetDate)', () => {
+  const day = M.DAYS.lun;
+  const orig = { id: '2026-10-26_lun', date: '2026-10-26', dayId: 'lun', block: 'TORSO', finishedAt: 100, entries: [
+    { slotId: 'lun1', exId: 'smith_bench', sets: [{ w: 25, r: 10 }] },
+  ] };
+  const d = M.draftFromSession(day, orig);
+  d.targetDate = orig.date;
+  d.date = '2026-10-29'; // reabierta el jueves
+  const saved = M.sessionFromDraft(day, d, 200);
+  assert.equal(saved.id, '2026-10-26_lun');
+  assert.equal(saved.date, '2026-10-26');
+});
