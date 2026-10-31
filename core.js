@@ -672,6 +672,18 @@
   function sessionSetsCount(s) {
     return ((s && s.entries) || []).reduce((n, e) => n + ((e && Array.isArray(e.sets)) ? e.sets.length : 0), 0);
   }
+  function draftHasWork(d) {
+    if (!d || !d.slots || typeof d.slots !== 'object') return false;
+    for (const slotId of Object.keys(d.slots)) {
+      const sd = d.slots[slotId];
+      const byEx = (sd && sd.byEx) || {};
+      for (const exId of Object.keys(byEx)) {
+        const rows = byEx[exId];
+        if (Array.isArray(rows) && rows.some(rowCounts)) return true;
+      }
+    }
+    return false;
+  }
   function canon(v) {
     if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
     if (v && typeof v === 'object') {
@@ -693,8 +705,11 @@
     return fb > fa ? b : a;
   }
   function mergeDraft(da, db) {
-    if (!da) return db ? JSON.parse(JSON.stringify(db)) : null;
-    if (!db) return JSON.parse(JSON.stringify(da));
+    const wa = !!(da && (draftHasWork(da) || da.reopened));
+    const wb = !!(db && (draftHasWork(db) || db.reopened));
+    if (!wa && !wb) return null;
+    if (wa && !wb) return JSON.parse(JSON.stringify(da));
+    if (!wa && wb) return JSON.parse(JSON.stringify(db));
     if (da.date !== db.date) return JSON.parse(JSON.stringify(db.date > da.date ? db : da));
     const ta = Number(da.updatedAt || da.startedAt) || 0;
     const tb = Number(db.updatedAt || db.startedAt) || 0;
@@ -720,12 +735,15 @@
       slots[slotId] = { active, byEx };
     }
     const sMin = Math.min(Number(da.startedAt) || Infinity, Number(db.startedAt) || Infinity);
-    return {
+    const out = {
       date: newer.date,
       startedAt: sMin === Infinity ? (ta || tb || 0) : sMin,
       updatedAt: Math.max(ta, tb),
       slots,
     };
+    if (newer.targetDate || da.targetDate || db.targetDate) out.targetDate = newer.targetDate || db.targetDate || da.targetDate;
+    if (newer.reopened || da.reopened || db.reopened) out.reopened = true;
+    return out;
   }
 
   // Fusiona dos estados completos (ej. Espacio Principal + Segundo Espacio) sin perder series ni sesiones
@@ -774,9 +792,11 @@
     const drafts = {};
     for (const dayId of new Set([...Object.keys(lDrafts), ...Object.keys(rDrafts)])) {
       const md = mergeDraft(lDrafts[dayId], rDrafts[dayId]);
-      if (!md || !md.date) continue;
-      const doneS = sessById.get(md.date + '_' + dayId);
-      if (doneS && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
+      if (!md || !md.date || (!draftHasWork(md) && !md.reopened)) continue;
+      const tDate = md.targetDate || md.date;
+      const doneS = sessById.get(tDate + '_' + dayId)
+        || sessions.find(s => s && s.dayId === dayId && weekStart(s.date) === weekStart(tDate));
+      if (doneS && !md.reopened && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
       drafts[dayId] = md;
     }
 
@@ -874,7 +894,7 @@
     EQUIP, EXERCISES, EXERCISE_LIST, ROUTINE, DAYS, BLOCK_TO_DAY, REFERENCES,
     todayISO, daysBetween, dowOf, fmtDate, parseNum, parseReps, fmtW, normName, slug,
     exerciseIdByName, equipOf, stepUp, formatSets, sortSessions, performances, lastPerformance,
-    workingSet, recommend, referenceFromEquivalents, emptyRows, newSlotDraft, rowCounts,
+    workingSet, recommend, referenceFromEquivalents, emptyRows, newSlotDraft, rowCounts, draftHasWork,
     sessionFromDraft, draftFromSession, slotFor, upsertSession, commitStaleDrafts, estMinutes,
     exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState,
     addDays, weekStart, weekPlan, moved,

@@ -370,7 +370,12 @@ function normalize(s) {
   s.v = 2;
   s.sessions = Array.isArray(s.sessions) ? s.sessions : [];
   s.deleted = s.deleted && typeof s.deleted === 'object' ? s.deleted : {};
-  s.drafts = s.drafts && typeof s.drafts === 'object' ? s.drafts : {};
+  const rawDrafts = s.drafts && typeof s.drafts === 'object' ? s.drafts : {};
+  s.drafts = {};
+  for (const k of Object.keys(rawDrafts)) {
+    const dr = rawDrafts[k];
+    if (dr && dr.date && (M.draftHasWork(dr) || dr.reopened)) s.drafts[k] = dr;
+  }
   s.custom = s.custom && typeof s.custom === 'object' ? s.custom : {};
   s.settings = Object.assign(d.settings, s.settings || {});
   s.settings.primary = s.settings.primary || {};
@@ -385,7 +390,7 @@ function normalize(s) {
 // ================= Sincronización entre espacios (GitHub Gist privado) =================
 const Sync = (() => {
   const KEY = 'mrp_sync_v1', FILE = 'mrp_sync_v2.json';
-  let cfg = null, busy = false, queued = false, pushT = null;
+  let cfg = null, busy = false, queued = false, pushT = null, linkedUrl = false;
 
   function parseCfg(raw) {
     try {
@@ -398,8 +403,9 @@ const Sync = (() => {
     try { b = parseCfg(localStorage.getItem(KEY)); } catch (e) {}
     try { a = parseCfg(await Store.idbGet('sync')); } catch (e) {}
     cfg = b || a || null;
-    checkUrlCode();
+    linkedUrl = checkUrlCode();
     updateDot();
+    return linkedUrl;
   }
   function saveCfg() {
     const json = cfg ? JSON.stringify(cfg) : '';
@@ -434,7 +440,6 @@ const Sync = (() => {
     if (!parsed) return false;
     cfg = { token: parsed.token, gistId: parsed.gistId || (cfg && cfg.gistId) || '', lastSyncAt: 0, dirty: true, lastError: '' };
     saveCfg();
-    setTimeout(() => sync({ notifyLinked: true }), 80);
     return true;
   }
   function isConfigured() { return !!(cfg && cfg.token); }
@@ -470,7 +475,10 @@ const Sync = (() => {
     btn.title = 'Sincronización: ' + statusShort();
   }
   async function ghFetch(path, opts) {
-    const res = await fetch('https://api.github.com' + path, Object.assign({
+    const isGet = !opts || !opts.method || opts.method === 'GET';
+    const sep = path.indexOf('?') >= 0 ? '&' : '?';
+    const url = 'https://api.github.com' + path + (isGet ? sep + '_=' + Date.now() : '');
+    const res = await fetch(url, Object.assign({
       cache: 'no-store',
       headers: {
         Accept: 'application/vnd.github+json',
@@ -505,24 +513,48 @@ const Sync = (() => {
     if (!isConfigured() || !state) return false;
     if (busy) { queued = true; return false; }
     busy = true;
+    clearTimeout(pushT);
     updateDot();
+    if ($('#sync-status-box')) renderSyncBox();
+    if (opts.manual && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {});
+    }
     try {
+      const nowIso = M.todayISO();
+      if (nowIso !== today) today = nowIso;
+      const prevIds = new Set(state.sessions.map(s => s.id));
+      const preCommitted = M.commitStaleDrafts(state, today);
       const gid = await ensureGist();
       const gist = await ghFetch('/gists/' + gid);
       const f = gist && gist.files && gist.files[FILE];
       const remote = f && f.content ? M.parseBackup(f.content) : null;
       const res = remote ? M.mergeState(state, remote) : { state, added: 0, updated: 0, localChanged: false, remoteChanged: true };
-      if (res.localChanged) {
-        const hadToday = state.sessions.some(s => s.date === today);
-        state = normalize(res.state);
-        const hasTodayNow = state.sessions.some(s => s.date === today);
-        if (ui.view === 'day' && (!DAYS[ui.day] || (!hadToday && hasTodayNow))) ui.day = defaultDay();
-        Store.save(true, true);
-        render();
+      state = normalize(res.state);
+      const postCommitted = M.commitStaleDrafts(state, today);
+      const newSessions = M.sortSessions(state.sessions.filter(s => s && !prevIds.has(s.id) && DAYS[s.dayId]));
+      const addedTotal = res.added + postCommitted.length;
+      const localChanged = res.localChanged || preCommitted.length > 0 || postCommitted.length > 0;
+      const remoteChanged = res.remoteChanged || preCommitted.length > 0 || postCommitted.length > 0;
+      if (ui.view === 'day') {
+        if (newSessions.length && (!DAYS[ui.day] || !hasActiveDraft(DAYS[ui.day]))) {
+          const newest = newSessions[newSessions.length - 1];
+          if (!DAYS[ui.day] || !newSessions.some(s => s.dayId === ui.day)) {
+            ui.day = newest.dayId;
+            state.settings.tab = { date: today, day: ui.day };
+          }
+        } else if (!DAYS[ui.day]) {
+          ui.day = defaultDay();
+        }
       }
-      if (res.remoteChanged || cfg.dirty || !remote) {
+      if (DAYS[ui.day] && savedSession(DAYS[ui.day]) && !hasActiveDraft(DAYS[ui.day])) {
+        ui.repeatDay = null;
+      }
+      Store.save(true, true);
+      render();
+      if (remoteChanged || cfg.dirty || !remote) {
         await ghFetch('/gists/' + gid, {
           method: 'PATCH',
+          keepalive: !!opts.keepalive,
           body: JSON.stringify({ files: { [FILE]: { content: M.buildBackup(state) } } }),
         });
       }
@@ -534,13 +566,14 @@ const Sync = (() => {
       Store.save(true, true);
       saveCfg();
       renderBanner();
+      if (opts.manual || opts.notifyLinked) closeSheet();
       if (opts.notifyLinked) {
         toast('Espacio vinculado ✓ (' + state.sessions.length + ' sesiones sincronizadas)', 3800);
       } else if (opts.manual) {
-        const msg = res.added ? `Sincronizado ✓ (+${res.added} del otro espacio)` : res.updated ? 'Sincronizado ✓ (actualizado)' : 'Sincronizado ✓ Todo al día';
+        const msg = addedTotal ? `Sincronizado ✓ (+${addedTotal} del otro espacio)` : (res.updated || localChanged) ? 'Sincronizado ✓ (actualizado)' : 'Sincronizado ✓ Todo al día';
         toast(msg);
-      } else if (res.added > 0) {
-        toast('Sincronizado: +' + res.added + (res.added === 1 ? ' sesión del otro espacio' : ' sesiones del otro espacio'), 3500);
+      } else if (addedTotal > 0) {
+        toast('Sincronizado: +' + addedTotal + (addedTotal === 1 ? ' sesión del otro espacio' : ' sesiones del otro espacio'), 3500);
       }
       return true;
     } catch (err) {
@@ -563,6 +596,11 @@ const Sync = (() => {
     saveCfg();
     clearTimeout(pushT);
     pushT = setTimeout(() => sync({ silent: true }), immediate ? 150 : 1200);
+  }
+  function flush() {
+    if (!isConfigured() || !cfg.dirty) return;
+    clearTimeout(pushT);
+    sync({ silent: true, keepalive: true });
   }
   async function connectWithInput(raw) {
     const parsed = parseCode(raw);
@@ -604,7 +642,7 @@ const Sync = (() => {
     </div>
     <div class="row-btns"><button class="btn ghost block" data-act="close-sheet">Cerrar</button></div>`;
   }
-  return { init, isConfigured, statusShort, sync, schedule, connectWithInput, disconnect, renderSyncBox, parseCode, magicUrl, code };
+  return { init, isConfigured, statusShort, sync, schedule, flush, connectWithInput, disconnect, renderSyncBox, parseCode, magicUrl, code };
 })();
 
 // ================= Acceso a datos =================
@@ -619,7 +657,17 @@ function getDraft(day, create) {
   if (!d && create) d = state.drafts[day.id] = { date: today, startedAt: Date.now(), slots: {} };
   return d;
 }
-function slotDraft(draft, slot) {
+function slotDraft(draft, slot, readOnly) {
+  if (!draft) {
+    const tmp = M.newSlotDraft(slot, primaryFor(slot));
+    if (!tmp.byEx[tmp.active]) tmp.byEx[tmp.active] = M.emptyRows(slot.sets);
+    return tmp;
+  }
+  if (readOnly && !draft.slots[slot.id]) {
+    const tmp = M.newSlotDraft(slot, primaryFor(slot));
+    if (!tmp.byEx[tmp.active]) tmp.byEx[tmp.active] = M.emptyRows(slot.sets);
+    return tmp;
+  }
   const sd = draft.slots[slot.id] || (draft.slots[slot.id] = M.newSlotDraft(slot, primaryFor(slot)));
   if (!sd.byEx[sd.active]) sd.byEx[sd.active] = M.emptyRows(slot.sets);
   return sd;
@@ -642,10 +690,7 @@ const savedSession = (day, p) => {
   const list = M.sortSessions(state.sessions.filter(s => s && s.dayId === day.id && s.date >= p.start && s.date <= p.end));
   return list.length ? list[list.length - 1] : null;
 };
-function draftHasWork(d) {
-  if (!d || !d.slots) return false;
-  return Object.values(d.slots).some(sd => sd && sd.byEx && Object.values(sd.byEx).some(rows => Array.isArray(rows) && rows.some(M.rowCounts)));
-}
+const draftHasWork = d => M.draftHasWork(d);
 function hasActiveDraft(day) {
   const d = getDraft(day, false);
   return !!(d && (d.reopened || ui.repeatDay === day.id || draftHasWork(d)));
@@ -770,7 +815,7 @@ function restHtml(p) {
 }
 
 function dayHtml(day, p) {
-  const draft = getDraft(day, true);
+  const draft = getDraft(day, false);
   const doneOn = p && p.done[day.id];
   const note = doneOn && doneOn !== today
     ? `<p class="muted" style="margin:0 0 12px">Ya hiciste esta sesión el ${M.fmtDate(doneOn, true)}. Si la repites, se guarda como otra sesión con la fecha de hoy.</p>`
@@ -793,7 +838,7 @@ function dayHtml(day, p) {
 }
 
 function slotHtml(day, slot, idx, draft) {
-  const sd = slotDraft(draft, slot);
+  const sd = slotDraft(draft, slot, true);
   const ex = getEx(sd.active);
   const rows = sd.byEx[sd.active];
   const rec = M.recommend(state.sessions, ex, slot, today);
@@ -917,19 +962,19 @@ function rerenderCard(slotId) {
   const { day, slot } = findSlot(slotId);
   const card = document.querySelector(`.card[data-slot="${slotId}"]`);
   if (!card) return renderMain();
-  card.outerHTML = slotHtml(day, slot, day.slots.indexOf(slot), getDraft(day, true));
+  card.outerHTML = slotHtml(day, slot, day.slots.indexOf(slot), getDraft(day, false));
   const fresh = document.querySelector(`.card[data-slot="${slotId}"] .sets`);
   if (fresh) syncWeightHints(fresh);
   updateProgress();
 }
 
 // ================= Contexto de una fila =================
-function rowCtx(el) {
+function rowCtx(el, readOnly) {
   const card = el.closest('.card');
   if (!card) return null;
   const { day, slot } = findSlot(card.dataset.slot);
-  const draft = getDraft(day, true);
-  const sd = slotDraft(draft, slot);
+  const draft = getDraft(day, !readOnly);
+  const sd = slotDraft(draft, slot, !!readOnly);
   const rows = sd.byEx[sd.active];
   const rowEl = el.closest('.setrow');
   const i = rowEl ? Number(rowEl.dataset.i) : -1;
@@ -1137,7 +1182,7 @@ A.rmset = t => {
   rerenderCard(c.slot.id);
 };
 A.hist = t => {
-  const c = rowCtx(t);
+  const c = rowCtx(t, true);
   const k = c.slot.id + ':' + c.sd.active;
   ui.hist[k] = !ui.hist[k];
   rerenderCard(c.slot.id);
@@ -1146,7 +1191,7 @@ A.hist = t => {
 A.swap = t => openSwap(t.closest('.card').dataset.slot);
 function openSwap(slotId) {
   const { day, slot } = findSlot(slotId);
-  const sd = slotDraft(getDraft(day, true), slot);
+  const sd = slotDraft(getDraft(day, false), slot, true);
   const primary = primaryFor(slot);
   let html = `<div class="sheet-h"><h3>${esc(slot.label)}</h3><p>Equivalentes: mismo patrón de movimiento y mismos músculos. Cada uno guarda su propio historial y su sugerencia.</p></div><ul class="opts">`;
   for (const id of slot.options) {
@@ -1519,18 +1564,25 @@ document.addEventListener('pointerdown', () => {
 
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); ui.installEvt = e; });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) Store.flush();
+  if (document.hidden) { Store.flush(); Sync.flush(); }
   else { checkDate(); Sync.sync({ silent: true }); }
 });
 window.addEventListener('online', () => Sync.sync({ silent: true }));
-window.addEventListener('hashchange', () => Sync.init());
-window.addEventListener('pagehide', () => Store.flush());
+window.addEventListener('hashchange', async () => {
+  const linked = await Sync.init();
+  if (linked) Sync.sync({ notifyLinked: true });
+});
+window.addEventListener('pagehide', () => { Store.flush(); Sync.flush(); });
 
 function defaultDay() {
   const t = state.settings.tab;
   if (t && t.date === today && (t.day === 'rest' || DAYS[t.day])) return t.day;
+  const doneToday = M.sortSessions(state.sessions.filter(s => s && s.date === today && DAYS[s.dayId]));
+  if (doneToday.length) return doneToday[doneToday.length - 1].dayId;
   const p = plan();
   if (p.next && p.nextDate === today) return p.next;
+  const doneWeek = M.sortSessions(state.sessions.filter(s => s && DAYS[s.dayId] && s.date >= p.start && s.date <= p.end));
+  if (doneWeek.length) return doneWeek[doneWeek.length - 1].dayId;
   return 'rest';
 }
 function checkDate() {
@@ -1549,12 +1601,18 @@ async function boot() {
   state = normalize(await Store.load());
   const c = M.commitStaleDrafts(state, today);
   ui.day = defaultDay();
-  await Sync.init();
+  const linked = await Sync.init();
   render();
   if (c.length) { Store.save(true); toast('Guardé ' + c.length + ' sesión(es) que habían quedado sin cerrar', 4000); }
-  if (Sync.isConfigured()) Sync.sync({ silent: true });
+  if (Sync.isConfigured()) Sync.sync({ silent: !linked, notifyLinked: !!linked });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').then(r => { if (r) r.update().catch(() => {}); }).catch(() => {});
   }
 }
 boot();
