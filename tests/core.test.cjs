@@ -463,3 +463,37 @@ test('reabrir sesión de otro día de la semana conserva su fecha original (targ
   assert.equal(saved.id, '2026-10-26_lun');
   assert.equal(saved.date, '2026-10-26');
 });
+
+test('mergeState: borradores vacíos nunca pisan sesiones terminadas ni borradores con series reales', () => {
+  const emptySlot = M.newSlotDraft(M.DAYS.jue.slots[0], 'lat_pulldown');
+  const local = {
+    v: 2,
+    sessions: [],
+    deleted: {},
+    drafts: {
+      // Borrador vacío creado hoy al abrir la pestaña en el 2º Espacio (con timestamp posterior)
+      jue: { date: '2026-10-31', startedAt: 9999, updatedAt: 9999, slots: { jue1: emptySlot } },
+      vie: { date: '2026-10-31', startedAt: 9999, updatedAt: 9999, slots: { vie1: M.newSlotDraft(M.DAYS.vie.slots[0], 'smith_hip_thrust') } },
+    },
+  };
+  const remote = {
+    v: 2,
+    sessions: [
+      { id: '2026-10-30_jue', date: '2026-10-30', dayId: 'jue', block: 'PULL', finishedAt: 5000, entries: [{ exId: 'lat_pulldown', sets: [{ w: 40, r: 10 }] }] },
+    ],
+    deleted: {},
+    drafts: {
+      // Borrador con series hechas ayer en el 1er Espacio
+      vie: { date: '2026-10-30', startedAt: 4000, updatedAt: 4500, slots: {
+        vie1: { active: 'smith_hip_thrust', byEx: { smith_hip_thrust: [{ w: '60', r: '10', done: true, t: 4500 }] } },
+      } },
+    },
+  };
+  const res = M.mergeState(local, remote);
+  assert.equal(res.state.drafts.jue, undefined, 'el borrador vacío de jue se descarta');
+  assert.ok(res.state.drafts.vie, 'el borrador con series reales de vie se conserva sobre el vacío más nuevo');
+  assert.equal(res.state.drafts.vie.date, '2026-10-30');
+  const committed = M.commitStaleDrafts(res.state, '2026-10-31');
+  assert.equal(committed.length, 1);
+  assert.equal(committed[0].id, '2026-10-30_vie');
+});

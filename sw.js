@@ -1,14 +1,17 @@
-/* Service worker: la app abre al instante y funciona sin conexión.
-   Estrategia stale-while-revalidate: responde desde caché y actualiza en segundo plano.
-   Al publicar una versión nueva, subir CACHE para limpiar la anterior. */
-const CACHE = 'mrp-v2-6';
+/* Service worker: la app abre rápido, siempre prioriza la última versión con red
+   y funciona 100 % sin conexión usando el caché de respaldo. */
+const CACHE = 'mrp-v2-7';
 const CORE = [
   './', './index.html', './core.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(CORE.map(u => fetch(new Request(u, { cache: 'reload' })).then(r => r.ok ? c.put(u, r) : null))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -30,6 +33,7 @@ self.addEventListener('fetch', e => {
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const nav = req.mode === 'navigate';
+    const isCode = nav || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/core.js') || url.pathname.endsWith('/');
     const cached = (await cache.match(req, { ignoreSearch: nav })) || (nav ? await cache.match('./index.html') : undefined);
     const network = fetch(req)
       .then(res => {
@@ -37,6 +41,10 @@ self.addEventListener('fetch', e => {
         return res;
       })
       .catch(() => null);
+    if (isCode) {
+      const res = await network;
+      return res || cached || new Response('Sin conexión', { status: 503, statusText: 'offline' });
+    }
     if (cached) {
       e.waitUntil(network);
       return cached;
