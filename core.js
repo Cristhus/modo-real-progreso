@@ -751,6 +751,31 @@
     return out;
   }
 
+  // ---------- Archivo mensual (solo agrega, nunca quita) ----------
+  // Copia de seguridad aparte del estado sincronizado: ni las marcas de borrado ni los merges la tocan.
+  function archiveMonths(sessions, sinceStamp) {
+    const since = Number(sinceStamp) || 0;
+    const months = new Set();
+    for (const s of sessions || []) {
+      if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && sessionStamp(s) > since) months.add(s.date.slice(0, 7));
+    }
+    return [...months].sort();
+  }
+  function mergeArchive(existingText, sessions, month) {
+    let prev = [];
+    try {
+      const o = existingText ? JSON.parse(existingText) : null;
+      if (o && Array.isArray(o.sessions)) prev = o.sessions.filter(s => s && typeof s.id === 'string');
+    } catch (e) { /* archivo ilegible: se rearma con lo que hay */ }
+    const map = new Map(prev.map(s => [s.id, s]));
+    for (const s of sessions || []) {
+      if (!s || typeof s.id !== 'string' || !s.date || s.date.slice(0, 7) !== month) continue;
+      const old = map.get(s.id);
+      if (!old || sessionStamp(s) > sessionStamp(old)) map.set(s.id, s);
+    }
+    return JSON.stringify({ app: 'modo-real-progreso', format: 'archive-1', month, sessions: sortSessions([...map.values()]) }, null, 1);
+  }
+
   // Fusiona dos estados completos (ej. Espacio Principal + Segundo Espacio) sin perder series ni sesiones
   function mergeState(local, remote) {
     const L = local || {}, R = remote || {};
@@ -902,7 +927,7 @@
     exerciseIdByName, equipOf, stepUp, formatSets, sortSessions, performances, lastPerformance,
     workingSet, recommend, referenceFromEquivalents, emptyRows, newSlotDraft, rowCounts, draftHasWork,
     sessionFromDraft, draftFromSession, slotFor, upsertSession, commitStaleDrafts, estMinutes,
-    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState,
+    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState, archiveMonths, mergeArchive,
     addDays, weekStart, weekPlan, moved,
   };
 });

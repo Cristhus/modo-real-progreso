@@ -525,3 +525,25 @@ test('reabrir por error y volver a guardar: la sesión no desaparece al sincroni
   const m3 = M.mergeState(only, { sessions: [], deleted: { [id]: tReopen }, drafts: {} }).state;
   assert.ok(m3.sessions.some(s => s.id === id), 'no lo borra la marca del reabrir');
 });
+
+test('archivo mensual: agrega, actualiza por más nueva y nunca quita', () => {
+  const a = { id: '2026-11-12_mie', date: '2026-11-12', dayId: 'mie', entries: [{ exId: 'x', sets: [{ w: 20, r: 10 }] }], finishedAt: 100 };
+  const b = { id: '2026-11-13_vie', date: '2026-11-13', dayId: 'vie', entries: [], finishedAt: 200 };
+  const oct = { id: '2026-10-30_lun', date: '2026-10-30', dayId: 'lun', entries: [], finishedAt: 50 };
+  let txt = M.mergeArchive('', [a, b, oct], '2026-11');
+  assert.deepEqual(JSON.parse(txt).sessions.map(s => s.id), ['2026-11-12_mie', '2026-11-13_vie'], 'solo el mes pedido');
+  // El estado perdió la sesión (marca de borrado): el archivo la conserva
+  txt = M.mergeArchive(txt, [b], '2026-11');
+  assert.ok(JSON.parse(txt).sessions.some(s => s.id === a.id), 'nunca quita');
+  // Versión más vieja no pisa; más nueva sí
+  const viejo = Object.assign({}, a, { finishedAt: 10, entries: [] });
+  txt = M.mergeArchive(txt, [viejo], '2026-11');
+  assert.equal(JSON.parse(txt).sessions.find(s => s.id === a.id).entries.length, 1);
+  const nuevo = Object.assign({}, a, { finishedAt: 300, entries: [] });
+  txt = M.mergeArchive(txt, [nuevo], '2026-11');
+  assert.equal(JSON.parse(txt).sessions.find(s => s.id === a.id).finishedAt, 300);
+  assert.equal(M.mergeArchive('no es json', [a], '2026-11').length > 0, true, 'archivo ilegible no rompe');
+  assert.deepEqual(M.archiveMonths([a, b, oct], 0), ['2026-10', '2026-11']);
+  assert.deepEqual(M.archiveMonths([a, b, oct], 150), ['2026-11'], 'solo meses con cambios');
+  assert.deepEqual(M.archiveMonths([a, b, oct], 999), []);
+});

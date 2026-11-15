@@ -508,7 +508,8 @@ const Sync = (() => {
     saveCfg();
     return cfg.gistId;
   }
-  let lastErrToast = 0;
+  let lastErrToast = 0, backupPending = false;
+  function expectBackup() { backupPending = isConfigured(); }
   async function sync(opts) {
     opts = opts || {};
     if (!isConfigured() || !state) return false;
@@ -552,13 +553,23 @@ const Sync = (() => {
       }
       Store.save(true, true);
       render();
-      if (remoteChanged || cfg.dirty || !remote) {
+      // Archivo mensual archivo_AAAA-MM.json: solo agrega sesiones, la sincronización nunca lo lee ni lo borra
+      const archiveFiles = {};
+      for (const month of M.archiveMonths(state.sessions, cfg.archivedAt)) {
+        const name = 'archivo_' + month + '.json';
+        const prevF = gist && gist.files && gist.files[name];
+        archiveFiles[name] = { content: M.mergeArchive(prevF && prevF.content, state.sessions, month) };
+      }
+      const archived = Object.keys(archiveFiles).length > 0;
+      if (remoteChanged || cfg.dirty || !remote || archived) {
         await ghFetch('/gists/' + gid, {
           method: 'PATCH',
           keepalive: !!opts.keepalive,
-          body: JSON.stringify({ files: { [FILE]: { content: M.buildBackup(state) } } }),
+          body: JSON.stringify({ files: Object.assign({ [FILE]: { content: M.buildBackup(state) } }, archiveFiles) }),
         });
       }
+      if (archived) cfg.archivedAt = Date.now();
+      if (backupPending && archived) { backupPending = false; toast('Sesión guardada y respaldada ✓', 3000); }
       cfg.dirty = false;
       cfg.lastError = '';
       cfg.lastSyncAt = Date.now();
@@ -647,7 +658,7 @@ const Sync = (() => {
     </div>
     <div class="row-btns"><button class="btn ghost block" data-act="close-sheet">Cerrar</button></div>`;
   }
-  return { init, isConfigured, statusShort, sync, schedule, flush, connectWithInput, disconnect, renderSyncBox, parseCode, magicUrl, code };
+  return { init, isConfigured, statusShort, sync, schedule, expectBackup, flush, connectWithInput, disconnect, renderSyncBox, parseCode, magicUrl, code };
 })();
 
 // ================= Acceso a datos =================
@@ -1241,6 +1252,18 @@ A.finish = () => {
   const draft = getDraft(day, false);
   const s = draft && M.sessionFromDraft(day, draft, Date.now());
   if (!s) { toast('Marca al menos una serie ✓ para guardar'); return; }
+  let total = 0, hechas = 0;
+  for (const slot of day.slots) {
+    if (slot.optional) continue;
+    total += slot.sets;
+    const sd = draft.slots && draft.slots[slot.id];
+    const n = sd ? Object.values(sd.byEx || {}).reduce((a, rows) => a + rows.filter(M.rowCounts).length, 0) : 0;
+    hechas += Math.min(n, slot.sets);
+  }
+  const faltan = total - hechas;
+  const msg = '¿Terminar y guardar la sesión?\n\nHiciste ' + hechas + ' de ' + total + ' series'
+    + (faltan > 0 ? ' (te faltan ' + faltan + ').' : '.') + '\n\nSe guarda y se respalda en tu Gist.';
+  if (!confirm(msg)) return;
   if (state.deleted) delete state.deleted[s.id];
   state.sessions = M.upsertSession(state.sessions, s);
   delete state.drafts[day.id];
@@ -1249,7 +1272,8 @@ A.finish = () => {
   stopTimer();
   render();
   window.scrollTo(0, 0);
-  toast('Sesión guardada ✓');
+  Sync.expectBackup();
+  toast(Sync.isConfigured() ? 'Sesión guardada ✓ · respaldando…' : 'Sesión guardada ✓ (sin sincronizar: solo en este dispositivo)');
 };
 A.reopen = t => {
   const s = state.sessions.find(x => x.id === t.dataset.sid);
