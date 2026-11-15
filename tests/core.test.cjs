@@ -497,3 +497,53 @@ test('mergeState: borradores vacíos nunca pisan sesiones terminadas ni borrador
   assert.equal(committed.length, 1);
   assert.equal(committed[0].id, '2026-10-30_vie');
 });
+
+test('reabrir por error y volver a guardar: la sesión no desaparece al sincronizar días después', () => {
+  const day = M.DAYS.mie;
+  const slot = day.slots[0], exId = slot.options[0];
+  const draftWith = (n, extra) => Object.assign({ date: '2026-11-12', slots: { [slot.id]: { active: exId, byEx: { [exId]: Array.from({ length: n }, () => ({ w: '20', r: '10', done: true })) } } } }, extra);
+  const t0 = 1794537945870, tReopen = t0 + 3515, tEdit = 1794538740157, tSave = 1794540613560;
+  const id = '2026-11-12_mie';
+  // Remoto tras reabrir: sin sesión, marca de borrado y borrador reabierto
+  const remote = { sessions: [], deleted: { [id]: tReopen }, drafts: { mie: draftWith(2, { startedAt: t0, updatedAt: tEdit, reopened: true, targetDate: '2026-11-12' }) } };
+  // Local tras volver a guardar: la sesión con 3 series y sin borrador
+  const saved = M.sessionFromDraft(day, draftWith(3), tSave);
+  const local = { sessions: [saved], deleted: {}, drafts: {} };
+  const m = M.mergeState(local, remote).state;
+  assert.equal(m.drafts.mie, undefined, 'el borrador reabierto no resucita');
+  assert.ok(m.sessions.some(s => s.id === id), 'la sesión sigue');
+  // Dispositivo que quedó con sesión + borrador viejo y abre la app el sábado
+  const stale = { sessions: [saved], deleted: { [id]: tReopen }, drafts: { mie: remote.drafts.mie } };
+  M.commitStaleDrafts(stale, '2026-11-14');
+  const m2 = M.mergeState(stale, remote).state;
+  const s2 = m2.sessions.find(s => s.id === id);
+  assert.ok(s2, 'la sesión sobrevive al borrador viejo');
+  assert.equal(s2.entries[0].sets.length, 3, 'gana la versión guardada, no el borrador');
+  // Borrador reabierto que nunca se volvió a guardar: se guarda con el sello de su última edición
+  const only = { sessions: [], deleted: { [id]: tReopen }, drafts: { mie: remote.drafts.mie } };
+  M.commitStaleDrafts(only, '2026-11-14');
+  const m3 = M.mergeState(only, { sessions: [], deleted: { [id]: tReopen }, drafts: {} }).state;
+  assert.ok(m3.sessions.some(s => s.id === id), 'no lo borra la marca del reabrir');
+});
+
+test('archivo mensual: agrega, actualiza por más nueva y nunca quita', () => {
+  const a = { id: '2026-11-12_mie', date: '2026-11-12', dayId: 'mie', entries: [{ exId: 'x', sets: [{ w: 20, r: 10 }] }], finishedAt: 100 };
+  const b = { id: '2026-11-13_vie', date: '2026-11-13', dayId: 'vie', entries: [], finishedAt: 200 };
+  const oct = { id: '2026-10-30_lun', date: '2026-10-30', dayId: 'lun', entries: [], finishedAt: 50 };
+  let txt = M.mergeArchive('', [a, b, oct], '2026-11');
+  assert.deepEqual(JSON.parse(txt).sessions.map(s => s.id), ['2026-11-12_mie', '2026-11-13_vie'], 'solo el mes pedido');
+  // El estado perdió la sesión (marca de borrado): el archivo la conserva
+  txt = M.mergeArchive(txt, [b], '2026-11');
+  assert.ok(JSON.parse(txt).sessions.some(s => s.id === a.id), 'nunca quita');
+  // Versión más vieja no pisa; más nueva sí
+  const viejo = Object.assign({}, a, { finishedAt: 10, entries: [] });
+  txt = M.mergeArchive(txt, [viejo], '2026-11');
+  assert.equal(JSON.parse(txt).sessions.find(s => s.id === a.id).entries.length, 1);
+  const nuevo = Object.assign({}, a, { finishedAt: 300, entries: [] });
+  txt = M.mergeArchive(txt, [nuevo], '2026-11');
+  assert.equal(JSON.parse(txt).sessions.find(s => s.id === a.id).finishedAt, 300);
+  assert.equal(M.mergeArchive('no es json', [a], '2026-11').length > 0, true, 'archivo ilegible no rompe');
+  assert.deepEqual(M.archiveMonths([a, b, oct], 0), ['2026-10', '2026-11']);
+  assert.deepEqual(M.archiveMonths([a, b, oct], 150), ['2026-11'], 'solo meses con cambios');
+  assert.deepEqual(M.archiveMonths([a, b, oct], 999), []);
+});

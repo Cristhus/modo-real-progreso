@@ -1,6 +1,6 @@
 /* Service worker: la app abre rápido, siempre prioriza la última versión con red
    y funciona 100 % sin conexión usando el caché de respaldo. */
-const CACHE = 'mrp-v2-7';
+const CACHE = 'mrp-v2-8';
 const CORE = [
   './', './index.html', './core.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',

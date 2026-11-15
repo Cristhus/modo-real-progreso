@@ -536,8 +536,13 @@
       const d = state.drafts[dayId];
       if (!d || d.date >= today) continue;
       const day = DAYS[dayId];
-      const s = day ? sessionFromDraft(day, d, d.startedAt || Date.now()) : null;
-      if (s) { state.sessions = upsertSession(state.sessions, s); committed.push(s); }
+      // Sello = última edición del borrador (no startedAt: un borrador reabierto hereda la hora del guardado
+      // original, más vieja que la marca de borrado, y la sesión desaparecía al sincronizar)
+      const stamp = Math.max(Number(d.updatedAt) || 0, Number(d.startedAt) || 0) || Date.now();
+      const s = day ? sessionFromDraft(day, d, stamp) : null;
+      const prev = s && (state.sessions || []).find(x => x.id === s.id);
+      // Si ya hay una sesión guardada igual o más nueva, el borrador viejo no la pisa
+      if (s && !(prev && sessionStamp(prev) >= stamp)) { state.sessions = upsertSession(state.sessions, s); committed.push(s); }
       delete state.drafts[dayId];
     }
     return committed;
@@ -746,6 +751,31 @@
     return out;
   }
 
+  // ---------- Archivo mensual (solo agrega, nunca quita) ----------
+  // Copia de seguridad aparte del estado sincronizado: ni las marcas de borrado ni los merges la tocan.
+  function archiveMonths(sessions, sinceStamp) {
+    const since = Number(sinceStamp) || 0;
+    const months = new Set();
+    for (const s of sessions || []) {
+      if (s && /^\d{4}-\d{2}-\d{2}$/.test(s.date) && sessionStamp(s) > since) months.add(s.date.slice(0, 7));
+    }
+    return [...months].sort();
+  }
+  function mergeArchive(existingText, sessions, month) {
+    let prev = [];
+    try {
+      const o = existingText ? JSON.parse(existingText) : null;
+      if (o && Array.isArray(o.sessions)) prev = o.sessions.filter(s => s && typeof s.id === 'string');
+    } catch (e) { /* archivo ilegible: se rearma con lo que hay */ }
+    const map = new Map(prev.map(s => [s.id, s]));
+    for (const s of sessions || []) {
+      if (!s || typeof s.id !== 'string' || !s.date || s.date.slice(0, 7) !== month) continue;
+      const old = map.get(s.id);
+      if (!old || sessionStamp(s) > sessionStamp(old)) map.set(s.id, s);
+    }
+    return JSON.stringify({ app: 'modo-real-progreso', format: 'archive-1', month, sessions: sortSessions([...map.values()]) }, null, 1);
+  }
+
   // Fusiona dos estados completos (ej. Espacio Principal + Segundo Espacio) sin perder series ni sesiones
   function mergeState(local, remote) {
     const L = local || {}, R = remote || {};
@@ -796,7 +826,8 @@
       const tDate = md.targetDate || md.date;
       const doneS = sessById.get(tDate + '_' + dayId)
         || sessions.find(s => s && s.dayId === dayId && weekStart(s.date) === weekStart(tDate));
-      if (doneS && !md.reopened && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
+      // También un borrador reabierto: si después se volvió a guardar, la sesión es más nueva y el borrador no resucita
+      if (doneS && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
       drafts[dayId] = md;
     }
 
@@ -896,7 +927,7 @@
     exerciseIdByName, equipOf, stepUp, formatSets, sortSessions, performances, lastPerformance,
     workingSet, recommend, referenceFromEquivalents, emptyRows, newSlotDraft, rowCounts, draftHasWork,
     sessionFromDraft, draftFromSession, slotFor, upsertSession, commitStaleDrafts, estMinutes,
-    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState,
+    exName, exTag, buildTxt, buildAllTxt, parseTxt, sessionIdFor, buildBackup, parseBackup, mergeSessions, mergeState, archiveMonths, mergeArchive,
     addDays, weekStart, weekPlan, moved,
   };
 });
