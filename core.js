@@ -536,8 +536,13 @@
       const d = state.drafts[dayId];
       if (!d || d.date >= today) continue;
       const day = DAYS[dayId];
-      const s = day ? sessionFromDraft(day, d, d.startedAt || Date.now()) : null;
-      if (s) { state.sessions = upsertSession(state.sessions, s); committed.push(s); }
+      // Sello = última edición del borrador (no startedAt: un borrador reabierto hereda la hora del guardado
+      // original, más vieja que la marca de borrado, y la sesión desaparecía al sincronizar)
+      const stamp = Math.max(Number(d.updatedAt) || 0, Number(d.startedAt) || 0) || Date.now();
+      const s = day ? sessionFromDraft(day, d, stamp) : null;
+      const prev = s && (state.sessions || []).find(x => x.id === s.id);
+      // Si ya hay una sesión guardada igual o más nueva, el borrador viejo no la pisa
+      if (s && !(prev && sessionStamp(prev) >= stamp)) { state.sessions = upsertSession(state.sessions, s); committed.push(s); }
       delete state.drafts[dayId];
     }
     return committed;
@@ -796,7 +801,8 @@
       const tDate = md.targetDate || md.date;
       const doneS = sessById.get(tDate + '_' + dayId)
         || sessions.find(s => s && s.dayId === dayId && weekStart(s.date) === weekStart(tDate));
-      if (doneS && !md.reopened && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
+      // También un borrador reabierto: si después se volvió a guardar, la sesión es más nueva y el borrador no resucita
+      if (doneS && sessionStamp(doneS) >= (Number(md.updatedAt || md.startedAt) || 0)) continue;
       drafts[dayId] = md;
     }
 

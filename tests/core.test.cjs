@@ -497,3 +497,31 @@ test('mergeState: borradores vacíos nunca pisan sesiones terminadas ni borrador
   assert.equal(committed.length, 1);
   assert.equal(committed[0].id, '2026-10-30_vie');
 });
+
+test('reabrir por error y volver a guardar: la sesión no desaparece al sincronizar días después', () => {
+  const day = M.DAYS.mie;
+  const slot = day.slots[0], exId = slot.options[0];
+  const draftWith = (n, extra) => Object.assign({ date: '2026-11-12', slots: { [slot.id]: { active: exId, byEx: { [exId]: Array.from({ length: n }, () => ({ w: '20', r: '10', done: true })) } } } }, extra);
+  const t0 = 1794537945870, tReopen = t0 + 3515, tEdit = 1794538740157, tSave = 1794540613560;
+  const id = '2026-11-12_mie';
+  // Remoto tras reabrir: sin sesión, marca de borrado y borrador reabierto
+  const remote = { sessions: [], deleted: { [id]: tReopen }, drafts: { mie: draftWith(2, { startedAt: t0, updatedAt: tEdit, reopened: true, targetDate: '2026-11-12' }) } };
+  // Local tras volver a guardar: la sesión con 3 series y sin borrador
+  const saved = M.sessionFromDraft(day, draftWith(3), tSave);
+  const local = { sessions: [saved], deleted: {}, drafts: {} };
+  const m = M.mergeState(local, remote).state;
+  assert.equal(m.drafts.mie, undefined, 'el borrador reabierto no resucita');
+  assert.ok(m.sessions.some(s => s.id === id), 'la sesión sigue');
+  // Dispositivo que quedó con sesión + borrador viejo y abre la app el sábado
+  const stale = { sessions: [saved], deleted: { [id]: tReopen }, drafts: { mie: remote.drafts.mie } };
+  M.commitStaleDrafts(stale, '2026-11-14');
+  const m2 = M.mergeState(stale, remote).state;
+  const s2 = m2.sessions.find(s => s.id === id);
+  assert.ok(s2, 'la sesión sobrevive al borrador viejo');
+  assert.equal(s2.entries[0].sets.length, 3, 'gana la versión guardada, no el borrador');
+  // Borrador reabierto que nunca se volvió a guardar: se guarda con el sello de su última edición
+  const only = { sessions: [], deleted: { [id]: tReopen }, drafts: { mie: remote.drafts.mie } };
+  M.commitStaleDrafts(only, '2026-11-14');
+  const m3 = M.mergeState(only, { sessions: [], deleted: { [id]: tReopen }, drafts: {} }).state;
+  assert.ok(m3.sessions.some(s => s.id === id), 'no lo borra la marca del reabrir');
+});

@@ -508,6 +508,7 @@ const Sync = (() => {
     saveCfg();
     return cfg.gistId;
   }
+  let lastErrToast = 0;
   async function sync(opts) {
     opts = opts || {};
     if (!isConfigured() || !state) return false;
@@ -581,6 +582,10 @@ const Sync = (() => {
       saveCfg();
       if (opts.manual || opts.notifyLinked) {
         toast('No se pudo sincronizar (' + cfg.lastError + '). Revisa el código o tu conexión.', 4000);
+      } else if (navigator.onLine && Date.now() - (lastErrToast || 0) > 60000) {
+        // Antes el fallo automático solo cambiaba el punto de estado: ahora se avisa (máx. 1 vez por minuto)
+        lastErrToast = Date.now();
+        toast('No se sincronizó (' + cfg.lastError + '). Tus datos quedan en este dispositivo.', 4000);
       }
       return false;
     } finally {
@@ -1249,6 +1254,7 @@ A.finish = () => {
 A.reopen = t => {
   const s = state.sessions.find(x => x.id === t.dataset.sid);
   if (!s) return;
+  if (!confirm('¿Reabrir esta sesión para editarla? Tendrás que volver a guardarla.')) return;
   const day = DAYS[s.dayId] || DAYS[ui.day];
   const d = M.draftFromSession(day, s);
   d.targetDate = s.date;
